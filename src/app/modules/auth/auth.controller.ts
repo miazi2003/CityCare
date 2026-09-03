@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { registerValidationSchema } from "./auth.validation";
-import { registerCitizenIntoDB } from "./auth.service";
+import { loginValidationSchema, registerValidationSchema } from "./auth.validation";
+import { loginCitizenIntoDB, registerCitizenIntoDB } from "./auth.service";
 
 // Controller for citizen registration
 export const registerCitizen = async (req: Request, res: Response) => {
@@ -44,6 +44,44 @@ export const registerCitizen = async (req: Request, res: Response) => {
     }
 
     // Handle unexpected errors
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+export const loginCitizen = async (req: Request, res: Response) => {
+  try {
+    // Validate login data
+    const validationResult = loginValidationSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors
+        .map((err) => err.message)
+        .join(", ");
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+        data: null,
+      });
+    }
+
+    const { email, password } = validationResult.data;
+
+    const result = await loginCitizenIntoDB({
+      email,
+      password,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User logged in successfully",
+      data: result,
+    });
+  } catch (error: any) {
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
