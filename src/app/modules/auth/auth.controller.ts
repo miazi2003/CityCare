@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { loginValidationSchema, registerValidationSchema } from "./auth.validation";
-import { loginCitizenIntoDB, registerCitizenIntoDB } from "./auth.service";
+import {
+  registerCitizenIntoDB,
+  getCurrentUserFromDB,
+  loginCitizenIntoDB,
+} from "./auth.service";
 
 // Controller for citizen registration
 export const registerCitizen = async (req: Request, res: Response) => {
@@ -52,9 +56,9 @@ export const registerCitizen = async (req: Request, res: Response) => {
   }
 };
 
+// Login Citizen
 export const loginCitizen = async (req: Request, res: Response) => {
   try {
-    // Validate login data
     const validationResult = loginValidationSchema.safeParse(req.body);
 
     if (!validationResult.success) {
@@ -90,3 +94,51 @@ export const loginCitizen = async (req: Request, res: Response) => {
   }
 };
 
+// Controller to get current authenticated user profile
+export const getCurrentUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+        data: null,
+      });
+    }
+
+    // Fetch user from database
+    const user = await getCurrentUserFromDB(userId);
+
+    // 1. Check if user still exists
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        data: null,
+      });
+    }
+
+    // 2. Check if user is active
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "User account is inactive",
+        data: null,
+      });
+    }
+
+    // 3. Return current user profile (password excluded)
+    return res.status(200).json({
+      success: true,
+      message: "Current user profile fetched successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};

@@ -5,3 +5,16 @@ export interface ApiResponse<T = null> {
   data: T;
 }
 
+// Authenticated user payload attached to Express Request
+export interface IAuthUser {
+  id: string;
+  role: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: IAuthUser;
+    }
+  }
+}
