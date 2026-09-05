@@ -9,6 +9,7 @@ import {
   getSingleStaffFromDB,
   updateStaffIntoDB,
   deactivateStaffIntoDB,
+  getStaffByDepartmentFromDB,
 } from "./staff.service";
 
 // 1. Create a new staff member
@@ -212,3 +213,31 @@ export const deactivateStaff = async (req: Request, res: Response) => {
   }
 };
 
+// 6. Get active staff members by department ID
+export const getStaffByDepartment = async (req: Request, res: Response) => {
+  try {
+    const departmentId = req.params.departmentId as string;
+
+    const staffList = await getStaffByDepartmentFromDB(departmentId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Staff retrieved successfully",
+      data: staffList,
+    });
+  } catch (error: any) {
+    if (error.message === "Department not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
