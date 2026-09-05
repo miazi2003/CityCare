@@ -158,7 +158,7 @@ export const updateStaffIntoDB = async (
     }
   }
 
-  // Prepare update data
+  // Prepare update data (role changes are not permitted)
   const updateData: Record<string, any> = {};
 
   if (payload.name !== undefined) updateData.name = payload.name;
@@ -209,3 +209,31 @@ export const deactivateStaffIntoDB = async (id: string) => {
   return deactivatedStaff;
 };
 
+// 6. Get all active staff members by department ID
+export const getStaffByDepartmentFromDB = async (departmentId: string) => {
+  // Verify department exists
+  const department = await prisma.department.findUnique({
+    where: {
+      id: departmentId,
+    },
+  });
+
+  if (!department) {
+    throw new Error("Department not found");
+  }
+
+  // Fetch active STAFF members belonging to that department
+  const staffList = await prisma.user.findMany({
+    where: {
+      departmentId,
+      role: "STAFF",
+      isActive: true,
+    },
+    select: staffSelectFields,
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return staffList;
+};
