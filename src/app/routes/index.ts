@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import authRoutes from "../modules/auth/auth.route";
 import departmentRoutes from "../modules/department/department.route";
+import categoryRoutes from "../modules/category/category.route";
 
 const router = Router();
 
@@ -18,5 +19,8 @@ router.use("/auth", authRoutes);
 
 // Department endpoints: /api/v1/departments/*
 router.use("/departments", departmentRoutes);
+
+// Category endpoints: /api/v1/categories/*
+router.use("/categories", categoryRoutes);
 
 export default router;
