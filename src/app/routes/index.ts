@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import authRoutes from "../modules/auth/auth.route";
 import departmentRoutes from "../modules/department/department.route";
 import categoryRoutes from "../modules/category/category.route";
+import staffRoutes from "../modules/staff/staff.route";
 
 const router = Router();
 
@@ -22,5 +23,8 @@ router.use("/departments", departmentRoutes);
 
 // Category endpoints: /api/v1/categories/*
 router.use("/categories", categoryRoutes);
+
+// Staff endpoints: /api/v1/staff/*
+router.use("/staff", staffRoutes);
 
 export default router;
