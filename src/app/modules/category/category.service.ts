@@ -143,3 +143,4 @@ export const deactivateCategoryIntoDB = async (id: string) => {
 
   return deactivatedCategory;
 };
+
