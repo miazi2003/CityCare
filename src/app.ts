@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { config } from "./app/config";
 import router from "./app/routes";
 import { setupSwagger } from "./app/docs/swagger";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
@@ -9,7 +10,12 @@ const app: Application = express();
 
 // Security and parser middlewares
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: config.client_url,
+    credentials: true,
+  })
+);
 
 // Capture raw body for Stripe webhook signature verification
 app.use(

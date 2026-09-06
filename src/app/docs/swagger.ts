@@ -341,13 +341,8 @@ export const swaggerDocument = {
     "/complaints": {
       get: {
         tags: ["Complaints"],
-        summary: "List complaints (Role-scoped: Admin sees all, Staff sees department)",
+        summary: "List all complaints (ADMIN only)",
         security: [{ BearerAuth: [] }],
-        parameters: [
-          { name: "status", in: "query", schema: { type: "string" } },
-          { name: "departmentId", in: "query", schema: { type: "string" } },
-          { name: "priority", in: "query", schema: { type: "string" } },
-        ],
         responses: { 200: { description: "List of complaints" } },
       },
       post: {
@@ -360,13 +355,12 @@ export const swaggerDocument = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["title", "description", "location", "categoryId", "departmentId"],
+                required: ["title", "description", "location", "categoryId"],
                 properties: {
                   title: { type: "string" },
                   description: { type: "string" },
                   location: { type: "string" },
                   categoryId: { type: "string" },
-                  departmentId: { type: "string" },
                   priority: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "URGENT"] },
                 },
               },
@@ -384,12 +378,36 @@ export const swaggerDocument = {
         responses: { 200: { description: "Citizen's complaint list" } },
       },
     },
-    "/complaints/breached": {
+    "/complaints/assigned": {
       get: {
         tags: ["Complaints"],
-        summary: "List all SLA-breached complaints (ADMIN only)",
+        summary: "List complaints assigned to current staff member (STAFF only)",
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: "Staff's assigned complaints" } },
+      },
+    },
+    "/complaints/sla/breached": {
+      get: {
+        tags: ["Complaints"],
+        summary: "List all SLA-breached active complaints (ADMIN only)",
         security: [{ BearerAuth: [] }],
         responses: { 200: { description: "List of breached complaints" } },
+      },
+    },
+    "/complaints/sla/my": {
+      get: {
+        tags: ["Complaints"],
+        summary: "List active assigned complaints ordered by SLA due date (STAFF only)",
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: "Staff's active complaints ordered by due date" } },
+      },
+    },
+    "/complaints/sla/summary": {
+      get: {
+        tags: ["Complaints"],
+        summary: "Get aggregate SLA statistics summary (ADMIN only)",
+        security: [{ BearerAuth: [] }],
+        responses: { 200: { description: "Aggregate SLA summary counts" } },
       },
     },
     "/complaints/{id}": {
@@ -404,9 +422,23 @@ export const swaggerDocument = {
     "/complaints/{id}/review": {
       patch: {
         tags: ["Complaints"],
-        summary: "Review complaint (ADMIN only: transition SUBMITTED -> UNDER_REVIEW)",
+        summary: "Review complaint (ADMIN only: transition SUBMITTED -> UNDER_REVIEW | REJECTED)",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", enum: ["UNDER_REVIEW", "REJECTED"] },
+                },
+              },
+            },
+          },
+        },
         responses: { 200: { description: "Complaint reviewed" } },
       },
     },
@@ -437,6 +469,20 @@ export const swaggerDocument = {
         summary: "Start work on complaint (Assigned STAFF only: ASSIGNED -> IN_PROGRESS)",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", enum: ["IN_PROGRESS"] },
+                },
+              },
+            },
+          },
+        },
         responses: { 200: { description: "Status updated to IN_PROGRESS" } },
       },
     },
@@ -453,7 +499,7 @@ export const swaggerDocument = {
               schema: {
                 type: "object",
                 required: ["note"],
-                properties: { note: { type: "string" } },
+                properties: { note: { type: "string", minLength: 5, maxLength: 500 } },
               },
             },
           },
@@ -476,18 +522,6 @@ export const swaggerDocument = {
         summary: "Reopen closed complaint (Citizen owner only)",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["note"],
-                properties: { note: { type: "string" } },
-              },
-            },
-          },
-        },
         responses: { 200: { description: "Complaint marked as REOPENED" } },
       },
     },
@@ -509,13 +543,66 @@ export const swaggerDocument = {
         responses: { 200: { description: "Chronological status history" } },
       },
     },
-    "/complaints/{id}/sla": {
+    "/complaints/{id}/feedback": {
       get: {
-        tags: ["Complaints"],
-        summary: "Get dynamic SLA calculation for complaint",
+        tags: ["Feedback"],
+        summary: "Get feedback for a specific complaint (Citizen owner, Department Staff, or Admin)",
         security: [{ BearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "SLA status details" } },
+        responses: { 200: { description: "Feedback details" } },
+      },
+      post: {
+        tags: ["Feedback"],
+        summary: "Submit rating & comment for CLOSED complaint (Citizen owner only, max 1)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["rating"],
+                properties: {
+                  rating: { type: "integer", minimum: 1, maximum: 5, example: 5 },
+                  comment: { type: "string", example: "Issue was resolved quickly and effectively." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Feedback submitted" },
+          400: { description: "Invalid rating or complaint not CLOSED or duplicate feedback" },
+        },
+      },
+      patch: {
+        tags: ["Feedback"],
+        summary: "Update feedback for CLOSED complaint (Citizen owner only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  rating: { type: "integer", minimum: 1, maximum: 5, example: 4 },
+                  comment: { type: "string", example: "Updated feedback comment." },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: "Feedback updated" } },
+      },
+      delete: {
+        tags: ["Feedback"],
+        summary: "Delete feedback for complaint (Citizen owner only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Feedback deleted" } },
       },
     },
 
@@ -528,31 +615,6 @@ export const swaggerDocument = {
         summary: "List all feedback records (ADMIN only)",
         security: [{ BearerAuth: [] }],
         responses: { 200: { description: "List of feedback entries" } },
-      },
-      post: {
-        tags: ["Feedback"],
-        summary: "Submit rating & comment for CLOSED complaint (Citizen owner only, max 1)",
-        security: [{ BearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["complaintId", "rating"],
-                properties: {
-                  complaintId: { type: "string" },
-                  rating: { type: "integer", minimum: 1, maximum: 5, example: 5 },
-                  comment: { type: "string", example: "Issue was resolved quickly and effectively." },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          201: { description: "Feedback submitted" },
-          400: { description: "Invalid rating or complaint not CLOSED or duplicate feedback" },
-        },
       },
     },
 
@@ -588,10 +650,34 @@ export const swaggerDocument = {
         responses: { 201: { description: "Service created" } },
       },
     },
+    "/services/{id}": {
+      get: {
+        tags: ["Services"],
+        summary: "Get single municipal service (Public/Citizen)",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Municipal service details" } },
+      },
+      patch: {
+        tags: ["Services"],
+        summary: "Update municipal service (ADMIN only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Municipal service updated" } },
+      },
+    },
+    "/services/{id}/deactivate": {
+      patch: {
+        tags: ["Services"],
+        summary: "Deactivate municipal service (ADMIN only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Municipal service deactivated" } },
+      },
+    },
     "/service-requests": {
       get: {
         tags: ["Service Requests"],
-        summary: "List service requests (Role-scoped: Admin sees all, Citizen sees own)",
+        summary: "List all service requests (ADMIN only)",
         security: [{ BearerAuth: [] }],
         responses: { 200: { description: "List of service requests" } },
       },
@@ -619,27 +705,63 @@ export const swaggerDocument = {
         responses: { 201: { description: "Service request created" } },
       },
     },
-    "/payments/checkout-session": {
-      post: {
-        tags: ["Payments"],
-        summary: "Create Stripe Checkout Session for service request (CITIZEN only)",
+    "/service-requests/my": {
+      get: {
+        tags: ["Service Requests"],
+        summary: "List current citizen's own service requests (CITIZEN only)",
         security: [{ BearerAuth: [] }],
+        responses: { 200: { description: "Citizen's service request list" } },
+      },
+    },
+    "/service-requests/{id}": {
+      get: {
+        tags: ["Service Requests"],
+        summary: "Get single service request details (Citizen owner or Admin)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Service request details" } },
+      },
+    },
+    "/service-requests/{id}/status": {
+      patch: {
+        tags: ["Service Requests"],
+        summary: "Update service request status (ADMIN only: PROCESSING | COMPLETED | CANCELLED)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["serviceRequestId"],
-                properties: { serviceRequestId: { type: "string" } },
+                required: ["status"],
+                properties: {
+                  status: { type: "string", enum: ["PROCESSING", "COMPLETED", "CANCELLED"] },
+                },
               },
             },
           },
         },
-        responses: { 200: { description: "Stripe checkout URL and session details" } },
+        responses: { 200: { description: "Service request status updated" } },
       },
     },
-    "/payments/webhook": {
+    "/service-requests/{id}/payment": {
+      post: {
+        tags: ["Payments"],
+        summary: "Create Stripe Checkout Session for service request (CITIZEN only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Stripe checkout URL and session details" } },
+      },
+      get: {
+        tags: ["Payments"],
+        summary: "Get payment status for service request (Citizen owner or Admin)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Payment status details" } },
+      },
+    },
+    "/payments/stripe/webhook": {
       post: {
         tags: ["Payments"],
         summary: "Stripe webhook endpoint for payment event verification",
@@ -651,7 +773,7 @@ export const swaggerDocument = {
     // -------------------------------------------------------------
     // NOTIFICATIONS
     // -------------------------------------------------------------
-    "/notifications": {
+    "/notifications/my": {
       get: {
         tags: ["Notifications"],
         summary: "Get current user's notifications",
@@ -662,18 +784,9 @@ export const swaggerDocument = {
     "/notifications/unread": {
       get: {
         tags: ["Notifications"],
-        summary: "Get unread count for current user",
+        summary: "Get unread notifications for current user",
         security: [{ BearerAuth: [] }],
-        responses: { 200: { description: "Unread count" } },
-      },
-    },
-    "/notifications/{id}/read": {
-      patch: {
-        tags: ["Notifications"],
-        summary: "Mark notification as read",
-        security: [{ BearerAuth: [] }],
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "Notification marked as read" } },
+        responses: { 200: { description: "Unread notifications list" } },
       },
     },
     "/notifications/read-all": {
@@ -684,12 +797,33 @@ export const swaggerDocument = {
         responses: { 200: { description: "All notifications marked as read" } },
       },
     },
-    "/notifications/check-sla-breaches": {
+    "/notifications/check-sla": {
       post: {
         tags: ["Notifications"],
         summary: "Run SLA breach check and generate notifications (ADMIN only)",
         security: [{ BearerAuth: [] }],
         responses: { 200: { description: "SLA check completed" } },
+      },
+    },
+    "/notifications": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get all notifications with optional filters (ADMIN only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          { name: "type", in: "query", schema: { type: "string" } },
+          { name: "isRead", in: "query", schema: { type: "boolean" } },
+        ],
+        responses: { 200: { description: "List of all system notifications" } },
+      },
+    },
+    "/notifications/{id}/read": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark single notification as read (User owner only)",
+        security: [{ BearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Notification marked as read" } },
       },
     },
 
