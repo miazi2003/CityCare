@@ -97,6 +97,16 @@ export const swaggerDocument = {
         },
       },
     },
+    "/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "User logout",
+        description: "Logs out the authenticated user session.",
+        responses: {
+          200: { description: "User logged out successfully" },
+        },
+      },
+    },
     "/auth/me": {
       get: {
         tags: ["Auth"],

@@ -97,6 +97,23 @@ export const loginCitizen = async (req: Request, res: Response) => {
   }
 };
 
+// Controller for user logout
+export const logoutUser = async (req: Request, res: Response) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+      data: null,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
 // Controller to get current authenticated user profile
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {

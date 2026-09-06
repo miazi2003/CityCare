@@ -3,6 +3,7 @@ import {
   registerCitizen,
   getCurrentUser,
   loginCitizen,
+  logoutUser,
   initiateGoogleAuth,
   googleAuthCallback,
   googleAuthToken,
@@ -16,6 +17,9 @@ router.post("/register", registerCitizen);
 
 // Endpoint: POST /api/v1/auth/login
 router.post("/login", loginCitizen);
+
+// Endpoint: POST /api/v1/auth/logout
+router.post("/logout", logoutUser);
 
 // Endpoint: GET /api/v1/auth/me (Protected route)
 router.get("/me", authMiddleware, getCurrentUser);
