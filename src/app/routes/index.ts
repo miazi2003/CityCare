@@ -5,6 +5,9 @@ import categoryRoutes from "../modules/category/category.route";
 import staffRoutes from "../modules/staff/staff.route";
 import complaintRoutes from "../modules/complaint/complaint.route";
 import feedbackRoutes from "../modules/feedback/feedback.route";
+import serviceRoutes from "../modules/service/service.route";
+import serviceRequestRoutes from "../modules/serviceRequest/serviceRequest.route";
+import paymentRoutes from "../modules/payment/payment.route";
 
 const router = Router();
 
@@ -34,6 +37,15 @@ router.use("/complaints", complaintRoutes);
 
 // Feedback endpoints: /api/v1/feedback/*
 router.use("/feedback", feedbackRoutes);
+
+// Municipal Service endpoints: /api/v1/services/*
+router.use("/services", serviceRoutes);
+
+// Municipal Service Request endpoints: /api/v1/service-requests/*
+router.use("/service-requests", serviceRequestRoutes);
+
+// Payment endpoints: /api/v1/payments/*
+router.use("/payments", paymentRoutes);
 
 export default router;
 

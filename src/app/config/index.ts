@@ -10,5 +10,7 @@ export const config = {
   database_url: process.env.DATABASE_URL || "",
   jwt_secret: process.env.JWT_SECRET!,
   jwt_expiresIn: process.env.JWT_EXPIRESIN as SignOptions["expiresIn"],
+  stripe_secret_key: process.env.STRIPE_SECRET_KEY || "",
+  stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET || "",
 };
 

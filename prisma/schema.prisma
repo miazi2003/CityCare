@@ -22,6 +22,8 @@ model User {
   assignedComplaints     Complaint[]              @relation("AssignedComplaints")
   complaintStatusChanges ComplaintStatusHistory[]
   feedbacks              Feedback[]
+  serviceRequests        ServiceRequest[]
+  payments               Payment[]
 
   @@index([departmentId])
   @@map("users")
@@ -141,4 +143,72 @@ enum ComplaintPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model MunicipalService {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  price           Decimal          @db.Decimal(10, 2)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  serviceRequests ServiceRequest[]
+
+  @@map("municipal_services")
+}
+
+model ServiceRequest {
+  id        String               @id @default(uuid())
+  serviceId String
+  service   MunicipalService     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  citizenId String
+  citizen   User                 @relation(fields: [citizenId], references: [id], onDelete: Restrict)
+  location  String
+  quantity  Int
+  notes     String?
+  amount    Decimal              @db.Decimal(10, 2)
+  status    ServiceRequestStatus @default(PENDING_PAYMENT)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  payment   Payment?
+
+  @@index([serviceId])
+  @@index([citizenId])
+  @@index([status])
+  @@map("service_requests")
+}
+
+model Payment {
+  id               String         @id @default(uuid())
+  serviceRequestId String         @unique
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Restrict)
+  citizenId        String
+  citizen          User           @relation(fields: [citizenId], references: [id], onDelete: Restrict)
+  amount           Decimal        @db.Decimal(10, 2)
+  currency         String         @default("usd")
+  provider         String         @default("stripe")
+  transactionId    String?
+  status           PaymentStatus  @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([citizenId])
+  @@index([status])
+  @@map("payments")
+}
+
+enum ServiceRequestStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
 }
