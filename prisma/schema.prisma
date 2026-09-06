@@ -18,8 +18,9 @@ model User {
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  complaints         Complaint[]
-  assignedComplaints Complaint[] @relation("AssignedComplaints")
+  complaints             Complaint[]
+  assignedComplaints     Complaint[]              @relation("AssignedComplaints")
+  complaintStatusChanges ComplaintStatusHistory[]
 
   @@index([departmentId])
   @@map("users")
@@ -68,11 +69,12 @@ model Complaint {
   citizen         User              @relation(fields: [citizenId], references: [id], onDelete: Restrict)
   assignedStaffId String?
   assignedStaff   User?             @relation("AssignedComplaints", fields: [assignedStaffId], references: [id], onDelete: Restrict)
-  status          ComplaintStatus   @default(SUBMITTED)
-  priority        ComplaintPriority @default(MEDIUM)
+  status          ComplaintStatus          @default(SUBMITTED)
+  priority        ComplaintPriority        @default(MEDIUM)
   dueAt           DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  statusHistory   ComplaintStatusHistory[]
 
   @@index([citizenId])
   @@index([departmentId])
@@ -80,6 +82,23 @@ model Complaint {
   @@index([status])
   @@index([assignedStaffId])
   @@map("complaints")
+}
+
+model ComplaintStatusHistory {
+  id          String           @id @default(uuid())
+  complaintId String
+  complaint   Complaint        @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  fromStatus  ComplaintStatus?
+  toStatus    ComplaintStatus
+  changedById String
+  changedBy   User             @relation(fields: [changedById], references: [id], onDelete: Restrict)
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([complaintId])
+  @@index([changedById])
+  @@index([createdAt])
+  @@map("complaint_status_history")
 }
 
 enum UserRole {

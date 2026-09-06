@@ -48,3 +48,14 @@ export const updateComplaintStatusValidationSchema = z.object({
   }),
 });
 
+// Zod schema for resolving a complaint (Staff)
+export const resolveComplaintValidationSchema = z.object({
+  note: z
+    .string({
+      required_error: "Note is required",
+    })
+    .min(5, "Note must be at least 5 characters")
+    .max(500, "Note cannot exceed 500 characters"),
+});
+
+

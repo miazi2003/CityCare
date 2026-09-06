@@ -9,6 +9,10 @@ import {
   assignStaffToComplaint,
   getAssignedComplaints,
   updateComplaintStatus,
+  resolveComplaint,
+  closeComplaint,
+  reopenComplaint,
+  getComplaintStatusHistory,
 } from "./complaint.controller";
 import {
   authMiddleware,
@@ -36,7 +40,15 @@ router.get(
   getAssignedComplaints
 );
 
-// 5. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
+// 5. Get complaint status history (IMPORTANT: Registered before generic GET /:id)
+router.get(
+  "/:id/history",
+  authMiddleware,
+  authorizeRoles("CITIZEN", "STAFF", "ADMIN"),
+  getComplaintStatusHistory
+);
+
+// 6. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
 router.get(
   "/:id",
   authMiddleware,
@@ -44,7 +56,7 @@ router.get(
   getSingleComplaint
 );
 
-// 6. Admin reviews complaint
+// 7. Admin reviews complaint
 router.patch(
   "/:id/review",
   authMiddleware,
@@ -52,7 +64,7 @@ router.patch(
   reviewComplaint
 );
 
-// 7. Admin assigns staff to complaint
+// 8. Admin assigns staff to complaint
 router.patch(
   "/:id/assign",
   authMiddleware,
@@ -60,7 +72,7 @@ router.patch(
   assignStaffToComplaint
 );
 
-// 8. Staff updates complaint status
+// 9. Staff updates complaint status (ASSIGNED -> IN_PROGRESS)
 router.patch(
   "/:id/status",
   authMiddleware,
@@ -68,7 +80,31 @@ router.patch(
   updateComplaintStatus
 );
 
-// 9. Citizen cancels own complaint
+// 10. Staff resolves complaint (IN_PROGRESS -> RESOLVED)
+router.patch(
+  "/:id/resolve",
+  authMiddleware,
+  authorizeRoles("STAFF"),
+  resolveComplaint
+);
+
+// 11. Citizen confirms and closes complaint (RESOLVED -> CLOSED)
+router.patch(
+  "/:id/close",
+  authMiddleware,
+  authorizeRoles("CITIZEN"),
+  closeComplaint
+);
+
+// 12. Citizen reopens a closed complaint (CLOSED -> REOPENED)
+router.patch(
+  "/:id/reopen",
+  authMiddleware,
+  authorizeRoles("CITIZEN"),
+  reopenComplaint
+);
+
+// 13. Citizen cancels own complaint
 router.patch(
   "/:id/cancel",
   authMiddleware,
@@ -77,5 +113,6 @@ router.patch(
 );
 
 export default router;
+
 
 

@@ -4,6 +4,7 @@ import {
   reviewComplaintValidationSchema,
   assignStaffValidationSchema,
   updateComplaintStatusValidationSchema,
+  resolveComplaintValidationSchema,
 } from "./complaint.validation";
 import {
   createComplaintIntoDB,
@@ -15,6 +16,10 @@ import {
   assignStaffToComplaintIntoDB,
   getAssignedComplaintsFromDB,
   updateComplaintStatusIntoDB,
+  resolveComplaintIntoDB,
+  closeComplaintIntoDB,
+  reopenComplaintIntoDB,
+  getComplaintStatusHistoryFromDB,
 } from "./complaint.service";
 
 // 1. Citizen creates a complaint
@@ -165,6 +170,7 @@ export const reviewComplaint = async (req: Request, res: Response) => {
 
     const updatedComplaint = await reviewComplaintIntoDB(
       id,
+      req.user!.id,
       validationResult.data.status
     );
 
@@ -264,6 +270,7 @@ export const assignStaffToComplaint = async (req: Request, res: Response) => {
 
     const updatedComplaint = await assignStaffToComplaintIntoDB(
       id,
+      req.user!.id,
       validationResult.data.staffId
     );
 
@@ -402,5 +409,216 @@ export const updateComplaintStatus = async (req: Request, res: Response) => {
     });
   }
 };
+
+// 10. Staff resolves a complaint (IN_PROGRESS -> RESOLVED)
+export const resolveComplaint = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const validationResult = resolveComplaintValidationSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors
+        .map((err) => err.message)
+        .join(", ");
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+        data: null,
+      });
+    }
+
+    const updatedComplaint = await resolveComplaintIntoDB(
+      id,
+      req.user!.id,
+      validationResult.data.note
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint resolved successfully",
+      data: updatedComplaint,
+    });
+  } catch (error: any) {
+    if (
+      error.message === "Complaint not found" ||
+      error.message === "Staff not found"
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (
+      error.message === "You are not assigned to this complaint" ||
+      error.message === "Staff does not belong to the complaint's department" ||
+      error.message === "You do not have permission to perform this action"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (
+      error.message === "Cannot resolve a closed complaint" ||
+      error.message === "Cannot resolve a cancelled complaint" ||
+      error.message === "Cannot resolve a rejected complaint" ||
+      error.message === "Complaint must be IN_PROGRESS to be resolved" ||
+      error.message === "Staff is inactive"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 11. Citizen confirms and closes complaint (RESOLVED -> CLOSED)
+export const closeComplaint = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const updatedComplaint = await closeComplaintIntoDB(id, req.user!.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint closed successfully",
+      data: updatedComplaint,
+    });
+  } catch (error: any) {
+    if (error.message === "Complaint not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (error.message === "You do not have permission to perform this action") {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (error.message === "Complaint must be in RESOLVED status to be closed") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 12. Citizen reopens a closed complaint (CLOSED -> REOPENED)
+export const reopenComplaint = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const updatedComplaint = await reopenComplaintIntoDB(id, req.user!.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint reopened successfully",
+      data: updatedComplaint,
+    });
+  } catch (error: any) {
+    if (error.message === "Complaint not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (error.message === "You do not have permission to perform this action") {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (error.message === "Only closed complaints can be reopened") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 13. Get complaint status history
+export const getComplaintStatusHistory = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const id = req.params.id as string;
+
+    const history = await getComplaintStatusHistoryFromDB(
+      id,
+      req.user!.id,
+      req.user!.role
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint status history retrieved successfully",
+      data: history,
+    });
+  } catch (error: any) {
+    if (error.message === "Complaint not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (error.message === "You do not have permission to perform this action") {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
 
 
