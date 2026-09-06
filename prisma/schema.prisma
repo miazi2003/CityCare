@@ -24,6 +24,7 @@ model User {
   feedbacks              Feedback[]
   serviceRequests        ServiceRequest[]
   payments               Payment[]
+  notifications          Notification[]
 
   @@index([departmentId])
   @@map("users")
@@ -79,6 +80,7 @@ model Complaint {
   updatedAt       DateTime                 @updatedAt
   statusHistory   ComplaintStatusHistory[]
   feedback        Feedback?
+  notifications   Notification[]
 
   @@index([citizenId])
   @@index([departmentId])
@@ -211,4 +213,37 @@ enum PaymentStatus {
   PAID
   FAILED
   CANCELLED
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        NotificationType
+  isRead      Boolean          @default(false)
+  complaintId String?
+  complaint   Complaint?       @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([complaintId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  COMPLAINT_CREATED
+  COMPLAINT_REVIEWED
+  COMPLAINT_ASSIGNED
+  COMPLAINT_IN_PROGRESS
+  COMPLAINT_RESOLVED
+  COMPLAINT_CLOSED
+  COMPLAINT_REOPENED
+  COMPLAINT_REJECTED
+  SLA_BREACHED
+  PAYMENT_SUCCESS
+  SERVICE_REQUEST_UPDATED
 }

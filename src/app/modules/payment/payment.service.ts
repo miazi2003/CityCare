@@ -1,6 +1,7 @@
 import prisma from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { config } from "../../config";
+import { createNotification } from "../notification/notification.service";
 
 // 1. Citizen creates Stripe payment session for a service request
 export const createPaymentSessionForServiceRequestIntoDB = async (
@@ -174,6 +175,8 @@ export const processStripeWebhookFromDB = async (
       sessionOrIntent.id;
 
     if (serviceRequestId) {
+      let notifiedCitizenId: string | null = null;
+
       await prisma.$transaction(async (tx) => {
         const payment = await tx.payment.findUnique({
           where: { serviceRequestId },
@@ -225,8 +228,18 @@ export const processStripeWebhookFromDB = async (
               status: "PAID",
             },
           });
+          notifiedCitizenId = serviceRequest.citizenId;
         }
       });
+
+      if (notifiedCitizenId) {
+        await createNotification({
+          userId: notifiedCitizenId,
+          title: "Payment Successful",
+          message: "Your payment for the municipal service request was successful.",
+          type: "PAYMENT_SUCCESS",
+        });
+      }
     }
   }
 

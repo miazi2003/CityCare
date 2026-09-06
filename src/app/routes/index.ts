@@ -8,6 +8,7 @@ import feedbackRoutes from "../modules/feedback/feedback.route";
 import serviceRoutes from "../modules/service/service.route";
 import serviceRequestRoutes from "../modules/serviceRequest/serviceRequest.route";
 import paymentRoutes from "../modules/payment/payment.route";
+import notificationRoutes from "../modules/notification/notification.route";
 
 const router = Router();
 
@@ -46,6 +47,9 @@ router.use("/service-requests", serviceRequestRoutes);
 
 // Payment endpoints: /api/v1/payments/*
 router.use("/payments", paymentRoutes);
+
+// Notification endpoints: /api/v1/notifications/*
+router.use("/notifications", notificationRoutes);
 
 export default router;
 

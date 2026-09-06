@@ -5,6 +5,7 @@ import {
   attachSlaStatusMany,
   getComplaintSlaStatus,
 } from "./complaint.utils";
+import { createNotification } from "../notification/notification.service";
 
 export interface ICreateComplaintPayload {
   title: string;
@@ -99,6 +100,15 @@ export const createComplaintIntoDB = async (
     });
 
     return createdComplaint;
+  });
+
+  // Notify Citizen
+  await createNotification({
+    userId: citizenId,
+    title: "Complaint Submitted",
+    message: "Your complaint has been submitted successfully.",
+    type: "COMPLAINT_CREATED",
+    complaintId: complaint.id,
   });
 
   return attachSlaStatus(complaint);
@@ -359,6 +369,25 @@ export const reviewComplaintIntoDB = async (
     return updated;
   });
 
+  // Notify Citizen based on review outcome
+  if (status === "UNDER_REVIEW") {
+    await createNotification({
+      userId: complaint.citizenId,
+      title: "Complaint Reviewed",
+      message: "Your complaint is now under review.",
+      type: "COMPLAINT_REVIEWED",
+      complaintId: id,
+    });
+  } else if (status === "REJECTED") {
+    await createNotification({
+      userId: complaint.citizenId,
+      title: "Complaint Rejected",
+      message: "Your complaint has been rejected by an administrator.",
+      type: "COMPLAINT_REJECTED",
+      complaintId: id,
+    });
+  }
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -545,6 +574,23 @@ export const assignStaffToComplaintIntoDB = async (
     return updated;
   });
 
+  // Notify assigned staff and citizen
+  await createNotification({
+    userId: staff.id,
+    title: "New Complaint Assigned",
+    message: `You have been assigned to complaint "${complaint.title}".`,
+    type: "COMPLAINT_ASSIGNED",
+    complaintId,
+  });
+
+  await createNotification({
+    userId: complaint.citizenId,
+    title: "Complaint Assigned",
+    message: "A staff member has been assigned to your complaint.",
+    type: "COMPLAINT_ASSIGNED",
+    complaintId,
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -703,6 +749,16 @@ export const updateComplaintStatusIntoDB = async (
     return updated;
   });
 
+  if (status === "IN_PROGRESS") {
+    await createNotification({
+      userId: complaint.citizenId,
+      title: "Complaint In Progress",
+      message: "A staff member has started working on your complaint.",
+      type: "COMPLAINT_IN_PROGRESS",
+      complaintId,
+    });
+  }
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -806,6 +862,15 @@ export const resolveComplaintIntoDB = async (
     return updated;
   });
 
+  // Notify citizen
+  await createNotification({
+    userId: complaint.citizenId,
+    title: "Complaint Resolved",
+    message: "Your complaint has been resolved by staff.",
+    type: "COMPLAINT_RESOLVED",
+    complaintId,
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -885,6 +950,17 @@ export const closeComplaintIntoDB = async (
     return updated;
   });
 
+  // Notify assigned staff if present
+  if (complaint.assignedStaffId) {
+    await createNotification({
+      userId: complaint.assignedStaffId,
+      title: "Complaint Closed",
+      message: "The citizen has confirmed resolution and closed the complaint.",
+      type: "COMPLAINT_CLOSED",
+      complaintId,
+    });
+  }
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -958,6 +1034,17 @@ export const reopenComplaintIntoDB = async (
 
     return updated;
   });
+
+  // Notify assigned staff if present
+  if (complaint.assignedStaffId) {
+    await createNotification({
+      userId: complaint.assignedStaffId,
+      title: "Complaint Reopened",
+      message: "The citizen has reopened the complaint.",
+      type: "COMPLAINT_REOPENED",
+      complaintId,
+    });
+  }
 
   return attachSlaStatus(updatedComplaint);
 };
