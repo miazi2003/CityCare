@@ -20,6 +20,9 @@ import {
   closeComplaintIntoDB,
   reopenComplaintIntoDB,
   getComplaintStatusHistoryFromDB,
+  getBreachedComplaintsFromDB,
+  getMySlaComplaintsFromDB,
+  getSlaSummaryFromDB,
 } from "./complaint.service";
 
 // 1. Citizen creates a complaint
@@ -612,6 +615,72 @@ export const getComplaintStatusHistory = async (
       });
     }
 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 14. Admin views all breached active complaints
+export const getBreachedComplaints = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const complaints = await getBreachedComplaintsFromDB();
+
+    return res.status(200).json({
+      success: true,
+      message: "Breached complaints retrieved successfully",
+      data: complaints,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 15. Staff views assigned active complaints ordered by dueAt
+export const getMySlaComplaints = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const complaints = await getMySlaComplaintsFromDB(req.user!.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Staff SLA complaints retrieved successfully",
+      data: complaints,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 16. Admin gets SLA summary
+export const getSlaSummary = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const summary = await getSlaSummaryFromDB();
+
+    return res.status(200).json({
+      success: true,
+      message: "SLA summary retrieved successfully",
+      data: summary,
+    });
+  } catch (error: any) {
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",

@@ -1,5 +1,10 @@
 import { ComplaintPriority, ComplaintStatus } from "@prisma/client";
 import prisma from "../../lib/prisma";
+import {
+  attachSlaStatus,
+  attachSlaStatusMany,
+  getComplaintSlaStatus,
+} from "./complaint.utils";
 
 export interface ICreateComplaintPayload {
   title: string;
@@ -96,7 +101,7 @@ export const createComplaintIntoDB = async (
     return createdComplaint;
   });
 
-  return complaint;
+  return attachSlaStatus(complaint);
 };
 
 // 2. Citizen views own complaints
@@ -133,13 +138,18 @@ export const getMyComplaintsFromDB = async (citizenId: string) => {
           comment: true,
         },
       },
+      statusHistory: {
+        where: { toStatus: { in: ["RESOLVED", "CLOSED"] } },
+        select: { toStatus: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  return complaints;
+  return attachSlaStatusMany(complaints);
 };
 
 // 3. View single complaint with role-based ownership enforcement
@@ -184,6 +194,11 @@ export const getSingleComplaintFromDB = async (
           comment: true,
         },
       },
+      statusHistory: {
+        where: { toStatus: { in: ["RESOLVED", "CLOSED"] } },
+        select: { toStatus: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -218,7 +233,7 @@ export const getSingleComplaintFromDB = async (
   }
   // ADMIN is allowed to view any complaint
 
-  return complaint;
+  return attachSlaStatus(complaint);
 };
 
 // 4. Admin views all complaints
@@ -259,13 +274,18 @@ export const getAllComplaintsFromDB = async () => {
           comment: true,
         },
       },
+      statusHistory: {
+        where: { toStatus: { in: ["RESOLVED", "CLOSED"] } },
+        select: { toStatus: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  return complaints;
+  return attachSlaStatusMany(complaints);
 };
 
 // 5. Admin reviews a complaint (SUBMITTED -> UNDER_REVIEW | REJECTED)
@@ -339,7 +359,7 @@ export const reviewComplaintIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 6. Citizen cancels own complaint (only allowed when SUBMITTED or UNDER_REVIEW)
@@ -411,7 +431,7 @@ export const cancelComplaintIntoDB = async (
     return cancelled;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 7. Admin assigns or reassigns staff to a complaint
@@ -525,7 +545,7 @@ export const assignStaffToComplaintIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 8. Staff views complaints assigned to them
@@ -569,13 +589,18 @@ export const getAssignedComplaintsFromDB = async (staffId: string) => {
           comment: true,
         },
       },
+      statusHistory: {
+        where: { toStatus: { in: ["RESOLVED", "CLOSED"] } },
+        select: { toStatus: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  return complaints;
+  return attachSlaStatusMany(complaints);
 };
 
 // 9. Staff updates complaint status (ASSIGNED -> IN_PROGRESS)
@@ -678,7 +703,7 @@ export const updateComplaintStatusIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 10. Staff resolves a complaint (IN_PROGRESS -> RESOLVED)
@@ -781,7 +806,7 @@ export const resolveComplaintIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 11. Citizen confirms and closes complaint (RESOLVED -> CLOSED)
@@ -839,6 +864,11 @@ export const closeComplaintIntoDB = async (
             email: true,
           },
         },
+        statusHistory: {
+          where: { toStatus: { in: ["RESOLVED", "CLOSED"] } },
+          select: { toStatus: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -855,7 +885,7 @@ export const closeComplaintIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 12. Citizen reopens a closed complaint (CLOSED -> REOPENED)
@@ -929,7 +959,7 @@ export const reopenComplaintIntoDB = async (
     return updated;
   });
 
-  return updatedComplaint;
+  return attachSlaStatus(updatedComplaint);
 };
 
 // 13. Get complaint status history (CITIZEN, STAFF, ADMIN)
@@ -991,6 +1021,196 @@ export const getComplaintStatusHistoryFromDB = async (
   });
 
   return history;
+};
+
+// Active and Completed Status Groups for SLA
+export const ACTIVE_STATUSES: ComplaintStatus[] = [
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "REOPENED",
+];
+
+export const COMPLETED_STATUSES: ComplaintStatus[] = [
+  "RESOLVED",
+  "CLOSED",
+];
+
+// 14. Admin views all breached active complaints
+export const getBreachedComplaintsFromDB = async () => {
+  const now = new Date();
+  const complaints = await prisma.complaint.findMany({
+    where: {
+      status: { in: ACTIVE_STATUSES },
+      dueAt: { lt: now },
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slaHours: true,
+        },
+      },
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+        },
+      },
+    },
+    orderBy: {
+      dueAt: "asc",
+    },
+  });
+
+  return attachSlaStatusMany(complaints);
+};
+
+// 15. Staff views active complaints assigned to them (ordered by dueAt asc)
+export const getMySlaComplaintsFromDB = async (staffId: string) => {
+  const complaints = await prisma.complaint.findMany({
+    where: {
+      assignedStaffId: staffId,
+      status: { in: ACTIVE_STATUSES },
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slaHours: true,
+        },
+      },
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+        },
+      },
+    },
+    orderBy: {
+      dueAt: "asc",
+    },
+  });
+
+  return attachSlaStatusMany(complaints);
+};
+
+// 16. Admin gets aggregate SLA summary
+export const getSlaSummaryFromDB = async () => {
+  const now = new Date();
+
+  // 1. Query all active complaints to compute totalActive, onTime, breached
+  const activeComplaints = await prisma.complaint.findMany({
+    where: {
+      status: { in: ACTIVE_STATUSES },
+    },
+    select: {
+      dueAt: true,
+    },
+  });
+
+  const totalActive = activeComplaints.length;
+  let onTime = 0;
+  let breached = 0;
+
+  for (const complaint of activeComplaints) {
+    if (complaint.dueAt) {
+      if (new Date(complaint.dueAt).getTime() >= now.getTime()) {
+        onTime++;
+      } else {
+        breached++;
+      }
+    }
+  }
+
+  // 2. Query all completed complaints to compute completedOnTime, completedLate
+  const completedComplaints = await prisma.complaint.findMany({
+    where: {
+      status: { in: COMPLETED_STATUSES },
+    },
+    select: {
+      status: true,
+      dueAt: true,
+      updatedAt: true,
+      statusHistory: {
+        where: {
+          toStatus: { in: COMPLETED_STATUSES },
+        },
+        select: {
+          toStatus: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  });
+
+  let completedOnTime = 0;
+  let completedLate = 0;
+
+  for (const complaint of completedComplaints) {
+    const slaStatus = getComplaintSlaStatus(complaint, now);
+    if (slaStatus === "COMPLETED_ON_TIME") {
+      completedOnTime++;
+    } else if (slaStatus === "COMPLETED_LATE") {
+      completedLate++;
+    }
+  }
+
+  return {
+    totalActive,
+    onTime,
+    breached,
+    completedOnTime,
+    completedLate,
+  };
 };
 
 

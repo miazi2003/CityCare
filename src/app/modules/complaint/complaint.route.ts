@@ -13,6 +13,9 @@ import {
   closeComplaint,
   reopenComplaint,
   getComplaintStatusHistory,
+  getBreachedComplaints,
+  getMySlaComplaints,
+  getSlaSummary,
 } from "./complaint.controller";
 import {
   createFeedback,
@@ -44,6 +47,31 @@ router.get(
   authMiddleware,
   authorizeRoles("STAFF"),
   getAssignedComplaints
+);
+
+// --- SLA Routes (IMPORTANT: Must be registered before /:id) ---
+// Admin gets breached active complaints
+router.get(
+  "/sla/breached",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  getBreachedComplaints
+);
+
+// Staff gets active assigned complaints ordered by deadline
+router.get(
+  "/sla/my",
+  authMiddleware,
+  authorizeRoles("STAFF"),
+  getMySlaComplaints
+);
+
+// Admin gets aggregate SLA summary
+router.get(
+  "/sla/summary",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  getSlaSummary
 );
 
 // 5. Get complaint status history (IMPORTANT: Registered before generic GET /:id)
