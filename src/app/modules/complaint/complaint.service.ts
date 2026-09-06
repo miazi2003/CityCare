@@ -91,6 +91,13 @@ export const getMyComplaintsFromDB = async (citizenId: string) => {
           name: true,
         },
       },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -128,6 +135,13 @@ export const getSingleComplaintFromDB = async (
           email: true,
         },
       },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
   });
 
@@ -143,10 +157,20 @@ export const getSingleComplaintFromDB = async (
   } else if (user.role === "STAFF") {
     const staff = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { departmentId: true },
+      select: { departmentId: true, isActive: true },
     });
 
-    if (!staff || !staff.departmentId || staff.departmentId !== complaint.departmentId) {
+    if (
+      !staff ||
+      !staff.isActive ||
+      !staff.departmentId ||
+      staff.departmentId !== complaint.departmentId
+    ) {
+      throw new Error("You do not have permission to perform this action");
+    }
+
+    // If complaint is assigned, only the assigned staff member can access it
+    if (complaint.assignedStaffId && complaint.assignedStaffId !== user.id) {
       throw new Error("You do not have permission to perform this action");
     }
   }
@@ -173,6 +197,13 @@ export const getAllComplaintsFromDB = async () => {
         },
       },
       citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
         select: {
           id: true,
           name: true,
@@ -278,4 +309,234 @@ export const cancelComplaintIntoDB = async (
 
   return cancelledComplaint;
 };
+
+// 7. Admin assigns or reassigns staff to a complaint
+export const assignStaffToComplaintIntoDB = async (
+  complaintId: string,
+  staffId: string
+) => {
+  const complaint = await prisma.complaint.findUnique({
+    where: { id: complaintId },
+  });
+
+  if (!complaint) {
+    throw new Error("Complaint not found");
+  }
+
+  if (complaint.status === "CLOSED") {
+    throw new Error("Cannot assign staff to a closed complaint");
+  }
+
+  if (complaint.status === "CANCELLED") {
+    throw new Error("Cannot assign staff to a cancelled complaint");
+  }
+
+  if (complaint.status === "REJECTED") {
+    throw new Error("Cannot assign staff to a rejected complaint");
+  }
+
+  const staff = await prisma.user.findUnique({
+    where: { id: staffId },
+  });
+
+  if (!staff) {
+    throw new Error("Staff not found");
+  }
+
+  if (staff.role !== "STAFF") {
+    throw new Error("User is not a staff member");
+  }
+
+  if (!staff.isActive) {
+    throw new Error("Staff is inactive");
+  }
+
+  if (!staff.departmentId) {
+    throw new Error("Staff is not assigned to a department");
+  }
+
+  if (staff.departmentId !== complaint.departmentId) {
+    throw new Error("Staff does not belong to the complaint's department");
+  }
+
+  let newStatus = complaint.status;
+  if (
+    complaint.status === "SUBMITTED" ||
+    complaint.status === "UNDER_REVIEW"
+  ) {
+    newStatus = "ASSIGNED";
+  }
+
+  const updatedComplaint = await prisma.complaint.update({
+    where: { id: complaintId },
+    data: {
+      assignedStaffId: staff.id,
+      status: newStatus,
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slaHours: true,
+        },
+      },
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  return updatedComplaint;
+};
+
+// 8. Staff views complaints assigned to them
+export const getAssignedComplaintsFromDB = async (staffId: string) => {
+  const complaints = await prisma.complaint.findMany({
+    where: {
+      assignedStaffId: staffId,
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slaHours: true,
+        },
+      },
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return complaints;
+};
+
+// 9. Staff updates complaint status (ASSIGNED -> IN_PROGRESS)
+export const updateComplaintStatusIntoDB = async (
+  complaintId: string,
+  staffId: string,
+  status: "IN_PROGRESS"
+) => {
+  const complaint = await prisma.complaint.findUnique({
+    where: { id: complaintId },
+  });
+
+  if (!complaint) {
+    throw new Error("Complaint not found");
+  }
+
+  if (complaint.status === "CLOSED") {
+    throw new Error("Cannot update a closed complaint");
+  }
+
+  if (complaint.status === "CANCELLED") {
+    throw new Error("Cannot update a cancelled complaint");
+  }
+
+  if (complaint.status === "REJECTED") {
+    throw new Error("Cannot update a rejected complaint");
+  }
+
+  const staff = await prisma.user.findUnique({
+    where: { id: staffId },
+  });
+
+  if (!staff) {
+    throw new Error("Staff not found");
+  }
+
+  if (!staff.isActive) {
+    throw new Error("Staff is inactive");
+  }
+
+  if (complaint.assignedStaffId !== staffId) {
+    throw new Error("You are not assigned to this complaint");
+  }
+
+  if (staff.departmentId !== complaint.departmentId) {
+    throw new Error("Staff does not belong to the complaint's department");
+  }
+
+  if (complaint.status !== "ASSIGNED") {
+    throw new Error("Invalid status transition");
+  }
+
+  const updatedComplaint = await prisma.complaint.update({
+    where: { id: complaintId },
+    data: {
+      status,
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slaHours: true,
+        },
+      },
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      citizen: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  return updatedComplaint;
+};
+
 

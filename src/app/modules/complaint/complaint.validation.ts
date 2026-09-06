@@ -32,3 +32,19 @@ export const reviewComplaintValidationSchema = z.object({
   }),
 });
 
+// Zod schema for assigning staff to a complaint (Admin)
+export const assignStaffValidationSchema = z.object({
+  staffId: z
+    .string({
+      required_error: "Staff ID is required",
+    })
+    .min(1, "Staff ID is required"),
+});
+
+// Zod schema for updating complaint status (Staff)
+export const updateComplaintStatusValidationSchema = z.object({
+  status: z.enum(["IN_PROGRESS"], {
+    required_error: "Status must be IN_PROGRESS",
+  }),
+});
+

@@ -6,6 +6,9 @@ import {
   getAllComplaints,
   reviewComplaint,
   cancelComplaint,
+  assignStaffToComplaint,
+  getAssignedComplaints,
+  updateComplaintStatus,
 } from "./complaint.controller";
 import {
   authMiddleware,
@@ -25,7 +28,15 @@ router.get("/", authMiddleware, authorizeRoles("ADMIN"), getAllComplaints);
 // 3. Citizen gets own complaints (IMPORTANT: Must be before /:id)
 router.get("/my", authMiddleware, authorizeRoles("CITIZEN"), getMyComplaints);
 
-// 4. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
+// 4. Staff gets assigned complaints (IMPORTANT: Must be before /:id)
+router.get(
+  "/assigned",
+  authMiddleware,
+  authorizeRoles("STAFF"),
+  getAssignedComplaints
+);
+
+// 5. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
 router.get(
   "/:id",
   authMiddleware,
@@ -33,7 +44,7 @@ router.get(
   getSingleComplaint
 );
 
-// 5. Admin reviews complaint
+// 6. Admin reviews complaint
 router.patch(
   "/:id/review",
   authMiddleware,
@@ -41,7 +52,23 @@ router.patch(
   reviewComplaint
 );
 
-// 6. Citizen cancels own complaint
+// 7. Admin assigns staff to complaint
+router.patch(
+  "/:id/assign",
+  authMiddleware,
+  authorizeRoles("ADMIN"),
+  assignStaffToComplaint
+);
+
+// 8. Staff updates complaint status
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  authorizeRoles("STAFF"),
+  updateComplaintStatus
+);
+
+// 9. Citizen cancels own complaint
 router.patch(
   "/:id/cancel",
   authMiddleware,
@@ -50,4 +77,5 @@ router.patch(
 );
 
 export default router;
+
 

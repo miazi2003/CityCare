@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import {
   createComplaintValidationSchema,
   reviewComplaintValidationSchema,
+  assignStaffValidationSchema,
+  updateComplaintStatusValidationSchema,
 } from "./complaint.validation";
 import {
   createComplaintIntoDB,
@@ -10,6 +12,9 @@ import {
   getAllComplaintsFromDB,
   reviewComplaintIntoDB,
   cancelComplaintIntoDB,
+  assignStaffToComplaintIntoDB,
+  getAssignedComplaintsFromDB,
+  updateComplaintStatusIntoDB,
 } from "./complaint.service";
 
 // 1. Citizen creates a complaint
@@ -237,4 +242,165 @@ export const cancelComplaint = async (req: Request, res: Response) => {
     });
   }
 };
+
+// 7. Admin assigns or reassigns staff to a complaint
+export const assignStaffToComplaint = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const validationResult = assignStaffValidationSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors
+        .map((err) => err.message)
+        .join(", ");
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+        data: null,
+      });
+    }
+
+    const updatedComplaint = await assignStaffToComplaintIntoDB(
+      id,
+      validationResult.data.staffId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Staff assigned to complaint successfully",
+      data: updatedComplaint,
+    });
+  } catch (error: any) {
+    if (
+      error.message === "Complaint not found" ||
+      error.message === "Staff not found"
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (
+      error.message === "Cannot assign staff to a closed complaint" ||
+      error.message === "Cannot assign staff to a cancelled complaint" ||
+      error.message === "Cannot assign staff to a rejected complaint" ||
+      error.message === "User is not a staff member" ||
+      error.message === "Staff is inactive" ||
+      error.message === "Staff is not assigned to a department" ||
+      error.message === "Staff does not belong to the complaint's department"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 8. Staff gets complaints assigned to them
+export const getAssignedComplaints = async (req: Request, res: Response) => {
+  try {
+    const complaints = await getAssignedComplaintsFromDB(req.user!.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Assigned complaints retrieved successfully",
+      data: complaints,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// 9. Staff updates complaint status (ASSIGNED -> IN_PROGRESS)
+export const updateComplaintStatus = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+
+    const validationResult = updateComplaintStatusValidationSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors
+        .map((err) => err.message)
+        .join(", ");
+
+      return res.status(400).json({
+        success: false,
+        message: errorMessage,
+        data: null,
+      });
+    }
+
+    const updatedComplaint = await updateComplaintStatusIntoDB(
+      id,
+      req.user!.id,
+      validationResult.data.status
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Complaint status updated successfully",
+      data: updatedComplaint,
+    });
+  } catch (error: any) {
+    if (
+      error.message === "Complaint not found" ||
+      error.message === "Staff not found"
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (
+      error.message === "You are not assigned to this complaint" ||
+      error.message === "Staff does not belong to the complaint's department" ||
+      error.message === "You do not have permission to perform this action"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    if (
+      error.message === "Cannot update a closed complaint" ||
+      error.message === "Cannot update a cancelled complaint" ||
+      error.message === "Cannot update a rejected complaint" ||
+      error.message === "Invalid status transition" ||
+      error.message === "Staff is inactive"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        data: null,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
 
