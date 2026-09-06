@@ -15,6 +15,12 @@ import {
   getComplaintStatusHistory,
 } from "./complaint.controller";
 import {
+  createFeedback,
+  getFeedbackByComplaint,
+  updateFeedback,
+  deleteFeedback,
+} from "../feedback/feedback.controller";
+import {
   authMiddleware,
   authorizeRoles,
 } from "../../middlewares/auth.middleware";
@@ -48,7 +54,15 @@ router.get(
   getComplaintStatusHistory
 );
 
-// 6. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
+// 6. Get complaint feedback (IMPORTANT: Registered before generic GET /:id)
+router.get(
+  "/:id/feedback",
+  authMiddleware,
+  authorizeRoles("CITIZEN", "STAFF", "ADMIN"),
+  getFeedbackByComplaint
+);
+
+// 7. View single complaint (CITIZEN, STAFF, ADMIN with ownership checks)
 router.get(
   "/:id",
   authMiddleware,
@@ -104,7 +118,7 @@ router.patch(
   reopenComplaint
 );
 
-// 13. Citizen cancels own complaint
+// 14. Citizen cancels own complaint
 router.patch(
   "/:id/cancel",
   authMiddleware,
@@ -112,7 +126,32 @@ router.patch(
   cancelComplaint
 );
 
+// 15. Citizen creates feedback for complaint
+router.post(
+  "/:id/feedback",
+  authMiddleware,
+  authorizeRoles("CITIZEN"),
+  createFeedback
+);
+
+// 16. Citizen updates feedback for complaint
+router.patch(
+  "/:id/feedback",
+  authMiddleware,
+  authorizeRoles("CITIZEN"),
+  updateFeedback
+);
+
+// 17. Citizen deletes feedback for complaint
+router.delete(
+  "/:id/feedback",
+  authMiddleware,
+  authorizeRoles("CITIZEN"),
+  deleteFeedback
+);
+
 export default router;
+
 
 
 

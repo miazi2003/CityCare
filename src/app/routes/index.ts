@@ -4,6 +4,7 @@ import departmentRoutes from "../modules/department/department.route";
 import categoryRoutes from "../modules/category/category.route";
 import staffRoutes from "../modules/staff/staff.route";
 import complaintRoutes from "../modules/complaint/complaint.route";
+import feedbackRoutes from "../modules/feedback/feedback.route";
 
 const router = Router();
 
@@ -31,4 +32,8 @@ router.use("/staff", staffRoutes);
 // Complaint endpoints: /api/v1/complaints/*
 router.use("/complaints", complaintRoutes);
 
+// Feedback endpoints: /api/v1/feedback/*
+router.use("/feedback", feedbackRoutes);
+
 export default router;
+

@@ -126,6 +126,13 @@ export const getMyComplaintsFromDB = async (citizenId: string) => {
           email: true,
         },
       },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -168,6 +175,13 @@ export const getSingleComplaintFromDB = async (
           id: true,
           name: true,
           email: true,
+        },
+      },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
         },
       },
     },
@@ -236,6 +250,13 @@ export const getAllComplaintsFromDB = async () => {
           id: true,
           name: true,
           email: true,
+        },
+      },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
         },
       },
     },
@@ -539,6 +560,13 @@ export const getAssignedComplaintsFromDB = async (staffId: string) => {
           id: true,
           name: true,
           email: true,
+        },
+      },
+      feedback: {
+        select: {
+          id: true,
+          rating: true,
+          comment: true,
         },
       },
     },

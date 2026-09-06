@@ -21,6 +21,7 @@ model User {
   complaints             Complaint[]
   assignedComplaints     Complaint[]              @relation("AssignedComplaints")
   complaintStatusChanges ComplaintStatusHistory[]
+  feedbacks              Feedback[]
 
   @@index([departmentId])
   @@map("users")
@@ -75,6 +76,7 @@ model Complaint {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   statusHistory   ComplaintStatusHistory[]
+  feedback        Feedback?
 
   @@index([citizenId])
   @@index([departmentId])
@@ -99,6 +101,21 @@ model ComplaintStatusHistory {
   @@index([changedById])
   @@index([createdAt])
   @@map("complaint_status_history")
+}
+
+model Feedback {
+  id          String    @id @default(uuid())
+  complaintId String    @unique
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  citizenId   String
+  citizen     User      @relation(fields: [citizenId], references: [id], onDelete: Restrict)
+  rating      Int
+  comment     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([citizenId])
+  @@map("feedbacks")
 }
 
 enum UserRole {
