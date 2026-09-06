@@ -10,6 +10,7 @@ import serviceRequestRoutes from "../modules/serviceRequest/serviceRequest.route
 import paymentRoutes from "../modules/payment/payment.route";
 import notificationRoutes from "../modules/notification/notification.route";
 import auditLogRoutes from "../modules/auditLog/auditLog.route";
+import analyticsRoutes from "../modules/analytics/analytics.route";
 
 const router = Router();
 
@@ -54,6 +55,9 @@ router.use("/notifications", notificationRoutes);
 
 // Audit Log endpoints: /api/v1/audit-logs/*
 router.use("/audit-logs", auditLogRoutes);
+
+// Analytics & Reports endpoints: /api/v1/analytics/*
+router.use("/analytics", analyticsRoutes);
 
 export default router;
 
