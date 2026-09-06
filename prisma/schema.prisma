@@ -25,6 +25,7 @@ model User {
   serviceRequests        ServiceRequest[]
   payments               Payment[]
   notifications          Notification[]
+  auditLogs              AuditLog[]
 
   @@index([departmentId])
   @@map("users")
@@ -246,4 +247,22 @@ enum NotificationType {
   SLA_BREACHED
   PAYMENT_SUCCESS
   SERVICE_REQUEST_UPDATED
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String
+  entity      String
+  entityId    String?
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

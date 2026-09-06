@@ -9,6 +9,7 @@ import serviceRoutes from "../modules/service/service.route";
 import serviceRequestRoutes from "../modules/serviceRequest/serviceRequest.route";
 import paymentRoutes from "../modules/payment/payment.route";
 import notificationRoutes from "../modules/notification/notification.route";
+import auditLogRoutes from "../modules/auditLog/auditLog.route";
 
 const router = Router();
 
@@ -50,6 +51,9 @@ router.use("/payments", paymentRoutes);
 
 // Notification endpoints: /api/v1/notifications/*
 router.use("/notifications", notificationRoutes);
+
+// Audit Log endpoints: /api/v1/audit-logs/*
+router.use("/audit-logs", auditLogRoutes);
 
 export default router;
 

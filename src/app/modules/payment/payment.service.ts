@@ -2,6 +2,7 @@ import prisma from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { config } from "../../config";
 import { createNotification } from "../notification/notification.service";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 // 1. Citizen creates Stripe payment session for a service request
 export const createPaymentSessionForServiceRequestIntoDB = async (
@@ -238,6 +239,19 @@ export const processStripeWebhookFromDB = async (
           title: "Payment Successful",
           message: "Your payment for the municipal service request was successful.",
           type: "PAYMENT_SUCCESS",
+        });
+
+        // Audit log verified payment (never store card numbers, CVC, or secrets)
+        await createAuditLog({
+          userId: notifiedCitizenId,
+          action: "PAYMENT",
+          entity: "PAYMENT",
+          entityId: serviceRequestId,
+          description: "Verified Stripe payment processed successfully",
+          metadata: {
+            serviceRequestId,
+            transactionId: transactionId || null,
+          },
         });
       }
     }

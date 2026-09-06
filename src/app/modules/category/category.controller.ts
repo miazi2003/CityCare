@@ -28,7 +28,10 @@ export const createCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const category = await createCategoryIntoDB(validationResult.data);
+    const category = await createCategoryIntoDB(
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(201).json({
       success: true,
@@ -140,7 +143,8 @@ export const updateCategory = async (req: Request, res: Response) => {
 
     const updatedCategory = await updateCategoryIntoDB(
       id,
-      validationResult.data
+      validationResult.data,
+      req.user?.id
     );
 
     return res.status(200).json({
@@ -189,7 +193,10 @@ export const deactivateCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const deactivatedCategory = await deactivateCategoryIntoDB(id);
+    const deactivatedCategory = await deactivateCategoryIntoDB(
+      id,
+      req.user?.id
+    );
 
     return res.status(200).json({
       success: true,

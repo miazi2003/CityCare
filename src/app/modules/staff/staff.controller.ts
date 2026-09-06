@@ -29,7 +29,10 @@ export const createStaff = async (req: Request, res: Response) => {
       });
     }
 
-    const staff = await createStaffIntoDB(validationResult.data);
+    const staff = await createStaffIntoDB(
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(201).json({
       success: true,
@@ -136,7 +139,11 @@ export const updateStaff = async (req: Request, res: Response) => {
       });
     }
 
-    const updatedStaff = await updateStaffIntoDB(id, validationResult.data);
+    const updatedStaff = await updateStaffIntoDB(
+      id,
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(200).json({
       success: true,
@@ -189,7 +196,10 @@ export const deactivateStaff = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
-    const deactivatedStaff = await deactivateStaffIntoDB(id);
+    const deactivatedStaff = await deactivateStaffIntoDB(
+      id,
+      req.user?.id
+    );
 
     return res.status(200).json({
       success: true,

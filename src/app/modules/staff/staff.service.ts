@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import prisma from "../../lib/prisma";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 // Payload interface for creating a staff member
 export interface ICreateStaffPayload {
@@ -36,7 +37,10 @@ const staffSelectFields = {
 };
 
 // 1. Create staff user under a department
-export const createStaffIntoDB = async (payload: ICreateStaffPayload) => {
+export const createStaffIntoDB = async (
+  payload: ICreateStaffPayload,
+  adminId?: string
+) => {
   // Check whether email already exists
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -80,6 +84,19 @@ export const createStaffIntoDB = async (payload: ICreateStaffPayload) => {
     select: staffSelectFields,
   });
 
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "CREATE",
+      entity: "STAFF",
+      entityId: staff.id,
+      description: "Admin created staff member",
+      metadata: {
+        departmentId: payload.departmentId,
+      },
+    });
+  }
+
   return staff;
 };
 
@@ -114,7 +131,8 @@ export const getSingleStaffFromDB = async (id: string) => {
 // 4. Update staff member
 export const updateStaffIntoDB = async (
   id: string,
-  payload: IUpdateStaffPayload
+  payload: IUpdateStaffPayload,
+  adminId?: string
 ) => {
   // Find existing user and make sure role is STAFF
   const existingStaff = await prisma.user.findFirst({
@@ -180,11 +198,34 @@ export const updateStaffIntoDB = async (
     select: staffSelectFields,
   });
 
+  if (adminId) {
+    const metadata: Record<string, any> = {};
+    if (
+      payload.departmentId &&
+      payload.departmentId !== existingStaff.departmentId
+    ) {
+      metadata.oldDepartmentId = existingStaff.departmentId;
+      metadata.newDepartmentId = payload.departmentId;
+    }
+
+    await createAuditLog({
+      userId: adminId,
+      action: "UPDATE",
+      entity: "STAFF",
+      entityId: updatedStaff.id,
+      description: "Admin updated staff member",
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    });
+  }
+
   return updatedStaff;
 };
 
 // 5. Deactivate staff member (soft delete)
-export const deactivateStaffIntoDB = async (id: string) => {
+export const deactivateStaffIntoDB = async (
+  id: string,
+  adminId?: string
+) => {
   const existingStaff = await prisma.user.findFirst({
     where: {
       id,
@@ -205,6 +246,16 @@ export const deactivateStaffIntoDB = async (id: string) => {
     },
     select: staffSelectFields,
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "DEACTIVATE",
+      entity: "STAFF",
+      entityId: deactivatedStaff.id,
+      description: "Admin deactivated staff member",
+    });
+  }
 
   return deactivatedStaff;
 };

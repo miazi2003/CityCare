@@ -163,7 +163,8 @@ export const updateServiceRequestStatus = async (
 
     const updated = await updateServiceRequestStatusIntoDB(
       id,
-      validationResult.data.status
+      validationResult.data.status,
+      req.user?.id
     );
 
     return res.status(200).json({

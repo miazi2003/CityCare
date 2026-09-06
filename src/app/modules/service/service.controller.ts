@@ -28,7 +28,10 @@ export const createService = async (req: Request, res: Response) => {
       });
     }
 
-    const service = await createServiceIntoDB(validationResult.data);
+    const service = await createServiceIntoDB(
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(201).json({
       success: true,
@@ -109,7 +112,11 @@ export const updateService = async (req: Request, res: Response) => {
       });
     }
 
-    const service = await updateServiceIntoDB(id, validationResult.data);
+    const service = await updateServiceIntoDB(
+      id,
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(200).json({
       success: true,
@@ -137,7 +144,7 @@ export const updateService = async (req: Request, res: Response) => {
 export const deactivateService = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const service = await deactivateServiceIntoDB(id);
+    const service = await deactivateServiceIntoDB(id, req.user?.id);
 
     return res.status(200).json({
       success: true,

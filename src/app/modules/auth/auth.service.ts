@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import prisma from "../../lib/prisma";
 import jwt from "jsonwebtoken";
 import { config } from "../../config";
+import { createAuditLog } from "../auditLog/auditLog.service";
 export interface IRegisterUserPayload {
   name: string;
   email: string;
@@ -78,6 +79,15 @@ export const loginCitizenIntoDB = async (payload: ILoginUserPayload) => {
 
   const token = jwt.sign(jwtPayload, config.jwt_secret, {
     expiresIn: config.jwt_expiresIn,
+  });
+
+  // Audit log successful login (never log passwords)
+  await createAuditLog({
+    userId: user.id,
+    action: "LOGIN",
+    entity: "AUTH",
+    entityId: user.id,
+    description: "User logged in successfully",
   });
 
   return {

@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 // Payload interface for creating a category
 export interface ICreateCategoryPayload {
@@ -17,7 +18,10 @@ export interface IUpdateCategoryPayload {
 }
 
 // 1. Create a new category under an active department
-export const createCategoryIntoDB = async (payload: ICreateCategoryPayload) => {
+export const createCategoryIntoDB = async (
+  payload: ICreateCategoryPayload,
+  adminId?: string
+) => {
   // Check if department exists
   const department = await prisma.department.findUnique({
     where: {
@@ -45,6 +49,16 @@ export const createCategoryIntoDB = async (payload: ICreateCategoryPayload) => {
       },
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "CREATE",
+      entity: "CATEGORY",
+      entityId: category.id,
+      description: "Admin created category",
+    });
+  }
 
   return category;
 };
@@ -93,7 +107,8 @@ export const getSingleCategoryFromDB = async (id: string) => {
 // 4. Update category name, description, slaHours, or departmentId
 export const updateCategoryIntoDB = async (
   id: string,
-  payload: IUpdateCategoryPayload
+  payload: IUpdateCategoryPayload,
+  adminId?: string
 ) => {
   // If departmentId is provided, validate that department exists and is active
   if (payload.departmentId) {
@@ -127,11 +142,24 @@ export const updateCategoryIntoDB = async (
     },
   });
 
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "UPDATE",
+      entity: "CATEGORY",
+      entityId: updatedCategory.id,
+      description: "Admin updated category",
+    });
+  }
+
   return updatedCategory;
 };
 
 // 5. Deactivate category (soft delete)
-export const deactivateCategoryIntoDB = async (id: string) => {
+export const deactivateCategoryIntoDB = async (
+  id: string,
+  adminId?: string
+) => {
   const deactivatedCategory = await prisma.category.update({
     where: {
       id,
@@ -140,6 +168,16 @@ export const deactivateCategoryIntoDB = async (id: string) => {
       isActive: false,
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "DEACTIVATE",
+      entity: "CATEGORY",
+      entityId: deactivatedCategory.id,
+      description: "Admin deactivated category",
+    });
+  }
 
   return deactivatedCategory;
 };

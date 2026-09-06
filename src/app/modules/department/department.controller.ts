@@ -28,7 +28,10 @@ export const createDepartment = async (req: Request, res: Response) => {
       });
     }
 
-    const department = await createDepartmentIntoDB(validationResult.data);
+    const department = await createDepartmentIntoDB(
+      validationResult.data,
+      req.user?.id
+    );
 
     return res.status(201).json({
       success: true,
@@ -133,7 +136,8 @@ export const updateDepartment = async (req: Request, res: Response) => {
 
     const updatedDepartment = await updateDepartmentIntoDB(
       id,
-      validationResult.data
+      validationResult.data,
+      req.user?.id
     );
 
     return res.status(200).json({
@@ -175,7 +179,10 @@ export const deactivateDepartment = async (req: Request, res: Response) => {
       });
     }
 
-    const deactivatedDepartment = await deactivateDepartmentIntoDB(id);
+    const deactivatedDepartment = await deactivateDepartmentIntoDB(
+      id,
+      req.user?.id
+    );
 
     return res.status(200).json({
       success: true,

@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 export interface ICreateServicePayload {
   name: string;
@@ -14,7 +15,10 @@ export interface IUpdateServicePayload {
 }
 
 // 1. Admin creates a municipal service
-export const createServiceIntoDB = async (payload: ICreateServicePayload) => {
+export const createServiceIntoDB = async (
+  payload: ICreateServicePayload,
+  adminId?: string
+) => {
   const service = await prisma.municipalService.create({
     data: {
       name: payload.name,
@@ -22,6 +26,16 @@ export const createServiceIntoDB = async (payload: ICreateServicePayload) => {
       price: payload.price,
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "CREATE",
+      entity: "MUNICIPAL_SERVICE",
+      entityId: service.id,
+      description: "Admin created municipal service",
+    });
+  }
 
   return service;
 };
@@ -49,7 +63,8 @@ export const getSingleServiceFromDB = async (id: string) => {
 // 4. Admin updates a municipal service
 export const updateServiceIntoDB = async (
   id: string,
-  payload: IUpdateServicePayload
+  payload: IUpdateServicePayload,
+  adminId?: string
 ) => {
   const existingService = await prisma.municipalService.findUnique({
     where: { id },
@@ -64,11 +79,24 @@ export const updateServiceIntoDB = async (
     data: payload,
   });
 
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "UPDATE",
+      entity: "MUNICIPAL_SERVICE",
+      entityId: updatedService.id,
+      description: "Admin updated municipal service",
+    });
+  }
+
   return updatedService;
 };
 
 // 5. Admin deactivates a municipal service
-export const deactivateServiceIntoDB = async (id: string) => {
+export const deactivateServiceIntoDB = async (
+  id: string,
+  adminId?: string
+) => {
   const existingService = await prisma.municipalService.findUnique({
     where: { id },
   });
@@ -83,6 +111,16 @@ export const deactivateServiceIntoDB = async (id: string) => {
       isActive: false,
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "DEACTIVATE",
+      entity: "MUNICIPAL_SERVICE",
+      entityId: deactivated.id,
+      description: "Admin deactivated municipal service",
+    });
+  }
 
   return deactivated;
 };

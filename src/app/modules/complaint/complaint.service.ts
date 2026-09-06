@@ -6,6 +6,7 @@ import {
   getComplaintSlaStatus,
 } from "./complaint.utils";
 import { createNotification } from "../notification/notification.service";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 export interface ICreateComplaintPayload {
   title: string;
@@ -109,6 +110,15 @@ export const createComplaintIntoDB = async (
     message: "Your complaint has been submitted successfully.",
     type: "COMPLAINT_CREATED",
     complaintId: complaint.id,
+  });
+
+  // Audit log complaint creation
+  await createAuditLog({
+    userId: citizenId,
+    action: "CREATE",
+    entity: "COMPLAINT",
+    entityId: complaint.id,
+    description: "Citizen submitted a new complaint",
   });
 
   return attachSlaStatus(complaint);
@@ -388,6 +398,16 @@ export const reviewComplaintIntoDB = async (
     });
   }
 
+  // Audit log complaint review
+  await createAuditLog({
+    userId: adminId,
+    action: "REVIEW",
+    entity: "COMPLAINT",
+    entityId: id,
+    description: `Admin reviewed complaint to ${status}`,
+    metadata: { status },
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -591,6 +611,22 @@ export const assignStaffToComplaintIntoDB = async (
     complaintId,
   });
 
+  // Audit log staff assignment/reassignment
+  const isReassigned = !!complaint.assignedStaffId;
+  await createAuditLog({
+    userId: adminId,
+    action: isReassigned ? "REASSIGN" : "ASSIGN",
+    entity: "COMPLAINT",
+    entityId: complaintId,
+    description: isReassigned
+      ? "Admin reassigned complaint to staff"
+      : "Admin assigned complaint to staff",
+    metadata: {
+      staffId: staff.id,
+      previousStaffId: complaint.assignedStaffId || null,
+    },
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -759,6 +795,19 @@ export const updateComplaintStatusIntoDB = async (
     });
   }
 
+  // Audit log complaint status change
+  await createAuditLog({
+    userId: staffId,
+    action: "STATUS_CHANGE",
+    entity: "COMPLAINT",
+    entityId: complaintId,
+    description: "Staff started working on complaint",
+    metadata: {
+      fromStatus: "ASSIGNED",
+      toStatus: status,
+    },
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -871,6 +920,16 @@ export const resolveComplaintIntoDB = async (
     complaintId,
   });
 
+  // Audit log complaint resolution
+  await createAuditLog({
+    userId: staffId,
+    action: "RESOLVE",
+    entity: "COMPLAINT",
+    entityId: complaintId,
+    description: "Staff marked complaint as resolved",
+    metadata: { note },
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -961,6 +1020,15 @@ export const closeComplaintIntoDB = async (
     });
   }
 
+  // Audit log complaint close
+  await createAuditLog({
+    userId: citizenId,
+    action: "CLOSE",
+    entity: "COMPLAINT",
+    entityId: complaintId,
+    description: "Citizen confirmed resolution and closed complaint",
+  });
+
   return attachSlaStatus(updatedComplaint);
 };
 
@@ -1045,6 +1113,15 @@ export const reopenComplaintIntoDB = async (
       complaintId,
     });
   }
+
+  // Audit log complaint reopen
+  await createAuditLog({
+    userId: citizenId,
+    action: "REOPEN",
+    entity: "COMPLAINT",
+    entityId: complaintId,
+    description: "Citizen reopened complaint",
+  });
 
   return attachSlaStatus(updatedComplaint);
 };

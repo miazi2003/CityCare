@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 // Payload interface for creating a department
 export interface ICreateDepartmentPayload {
@@ -14,7 +15,8 @@ export interface IUpdateDepartmentPayload {
 
 // 1. Create a new department
 export const createDepartmentIntoDB = async (
-  payload: ICreateDepartmentPayload
+  payload: ICreateDepartmentPayload,
+  adminId?: string
 ) => {
   const department = await prisma.department.create({
     data: {
@@ -22,6 +24,16 @@ export const createDepartmentIntoDB = async (
       description: payload.description,
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "CREATE",
+      entity: "DEPARTMENT",
+      entityId: department.id,
+      description: "Admin created department",
+    });
+  }
 
   return department;
 };
@@ -54,7 +66,8 @@ export const getSingleDepartmentFromDB = async (id: string) => {
 // 4. Update department name and/or description
 export const updateDepartmentIntoDB = async (
   id: string,
-  payload: IUpdateDepartmentPayload
+  payload: IUpdateDepartmentPayload,
+  adminId?: string
 ) => {
   const updatedDepartment = await prisma.department.update({
     where: {
@@ -63,11 +76,24 @@ export const updateDepartmentIntoDB = async (
     data: payload,
   });
 
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "UPDATE",
+      entity: "DEPARTMENT",
+      entityId: updatedDepartment.id,
+      description: "Admin updated department",
+    });
+  }
+
   return updatedDepartment;
 };
 
 // 5. Deactivate a department (soft delete by setting isActive to false)
-export const deactivateDepartmentIntoDB = async (id: string) => {
+export const deactivateDepartmentIntoDB = async (
+  id: string,
+  adminId?: string
+) => {
   const deactivatedDepartment = await prisma.department.update({
     where: {
       id,
@@ -76,6 +102,16 @@ export const deactivateDepartmentIntoDB = async (id: string) => {
       isActive: false,
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "DEACTIVATE",
+      entity: "DEPARTMENT",
+      entityId: deactivatedDepartment.id,
+      description: "Admin deactivated department",
+    });
+  }
 
   return deactivatedDepartment;
 };

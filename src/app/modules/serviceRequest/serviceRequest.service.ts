@@ -1,5 +1,6 @@
 import prisma from "../../lib/prisma";
 import { ServiceRequestStatus } from "@prisma/client";
+import { createAuditLog } from "../auditLog/auditLog.service";
 
 export interface ICreateServiceRequestPayload {
   serviceId: string;
@@ -148,7 +149,8 @@ export const getSingleServiceRequestFromDB = async (
 // 5. Admin updates service request status
 export const updateServiceRequestStatusIntoDB = async (
   id: string,
-  newStatus: "PROCESSING" | "COMPLETED" | "CANCELLED"
+  newStatus: "PROCESSING" | "COMPLETED" | "CANCELLED",
+  adminId?: string
 ) => {
   const request = await prisma.serviceRequest.findUnique({
     where: { id },
@@ -193,6 +195,20 @@ export const updateServiceRequestStatusIntoDB = async (
       },
     },
   });
+
+  if (adminId) {
+    await createAuditLog({
+      userId: adminId,
+      action: "STATUS_CHANGE",
+      entity: "SERVICE_REQUEST",
+      entityId: id,
+      description: `Admin updated service request status to ${newStatus}`,
+      metadata: {
+        previousStatus: request.status,
+        newStatus,
+      },
+    });
+  }
 
   return updated;
 };
