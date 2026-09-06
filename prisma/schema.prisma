@@ -18,41 +18,87 @@ model User {
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  complaints   Complaint[]
 
   @@index([departmentId])
   @@map("users")
 }
 
 model Department {
-  id          String     @id @default(uuid())
-  name        String     @unique
+  id          String      @id @default(uuid())
+  name        String      @unique
   description String?
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   categories  Category[]
   users       User[]
+  complaints  Complaint[]
 
   @@map("departments")
 }
 
 model Category {
-  id           String     @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String
   description  String?
   slaHours     Int
-  isActive     Boolean    @default(true)
+  isActive     Boolean     @default(true)
   departmentId String
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  department   Department  @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  complaints   Complaint[]
 
   @@index([departmentId])
   @@map("categories")
+}
+
+model Complaint {
+  id           String            @id @default(uuid())
+  title        String
+  description  String
+  location     String
+  categoryId   String
+  category     Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  departmentId String
+  department   Department        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  citizenId    String
+  citizen      User              @relation(fields: [citizenId], references: [id], onDelete: Restrict)
+  status       ComplaintStatus   @default(SUBMITTED)
+  priority     ComplaintPriority @default(MEDIUM)
+  dueAt        DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([citizenId])
+  @@index([departmentId])
+  @@index([categoryId])
+  @@index([status])
+  @@map("complaints")
 }
 
 enum UserRole {
   CITIZEN
   STAFF
   ADMIN
+}
+
+enum ComplaintStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REJECTED
+  CANCELLED
+  REOPENED
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
