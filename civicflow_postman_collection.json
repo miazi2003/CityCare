@@ -1,0 +1,508 @@
+{
+  "info": {
+    "name": "CivicFlow API",
+    "description": "Postman collection for CivicFlow — City Complaint & Service Request Platform Backend. Covers all 12 modules including authentication, complaint workflows, SLA management, paid services, Stripe payments, notifications, audit logs, and analytics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "staffToken", "value": "", "type": "string" },
+    { "key": "citizenToken", "value": "", "type": "string" },
+    { "key": "complaintId", "value": "", "type": "string" },
+    { "key": "serviceId", "value": "", "type": "string" },
+    { "key": "serviceRequestId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register Citizen",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Citizen\",\n  \"email\": \"citizen@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Login (Admin / Staff / Citizen)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@civicflow.com\",\n  \"password\": \"admin123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Current User Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Google OAuth URL (JSON Mode)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/google?redirect=false", "host": ["{{baseUrl}}"], "path": ["auth", "google"], "query": [{ "key": "redirect", "value": "false" }] }
+          }
+        },
+        {
+          "name": "Google ID Token Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"SAMPLE_GOOGLE_ID_TOKEN\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/google", "host": ["{{baseUrl}}"], "path": ["auth", "google"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Departments",
+      "item": [
+        {
+          "name": "List Departments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/departments", "host": ["{{baseUrl}}"], "path": ["departments"] }
+          }
+        },
+        {
+          "name": "Create Department (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Public Works\",\n  \"description\": \"Road maintenance and municipal structures\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/departments", "host": ["{{baseUrl}}"], "path": ["departments"] }
+          }
+        },
+        {
+          "name": "Update Department (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Public Works & Infrastructure\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/departments/:id", "host": ["{{baseUrl}}"], "path": ["departments", ":id"] }
+          }
+        },
+        {
+          "name": "Deactivate Department (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/departments/:id/deactivate", "host": ["{{baseUrl}}"], "path": ["departments", ":id", "deactivate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Create Category (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pothole Repair\",\n  \"slaHours\": 48,\n  \"departmentId\": \"DEPARTMENT_ID_HERE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Staff",
+      "item": [
+        {
+          "name": "List Staff (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/staff", "host": ["{{baseUrl}}"], "path": ["staff"] }
+          }
+        },
+        {
+          "name": "Create Staff (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Officer John\",\n  \"email\": \"officer.john@civicflow.gov\",\n  \"password\": \"Password123!\",\n  \"departmentId\": \"DEPARTMENT_ID_HERE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/staff", "host": ["{{baseUrl}}"], "path": ["staff"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Complaints",
+      "item": [
+        {
+          "name": "Create Complaint (Citizen Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Broken Streetlight\",\n  \"description\": \"Streetlight flickering on 5th Avenue\",\n  \"location\": \"5th Avenue, Corner 2\",\n  \"categoryId\": \"CATEGORY_ID_HERE\",\n  \"departmentId\": \"DEPARTMENT_ID_HERE\",\n  \"priority\": \"HIGH\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints", "host": ["{{baseUrl}}"], "path": ["complaints"] }
+          }
+        },
+        {
+          "name": "Get My Complaints (Citizen Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/my", "host": ["{{baseUrl}}"], "path": ["complaints", "my"] }
+          }
+        },
+        {
+          "name": "Review Complaint (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/review", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "review"] }
+          }
+        },
+        {
+          "name": "Assign Complaint (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staffId\": \"STAFF_USER_ID_HERE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/assign", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "assign"] }
+          }
+        },
+        {
+          "name": "Start Work (Staff: IN_PROGRESS)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/status", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "status"] }
+          }
+        },
+        {
+          "name": "Resolve Complaint (Staff Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Replaced the faulty LED bulb and verified circuit stability.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/resolve", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "resolve"] }
+          }
+        },
+        {
+          "name": "Close Complaint (Citizen Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/close", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "close"] }
+          }
+        },
+        {
+          "name": "Reopen Complaint (Citizen Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Light stopped working again after rain.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/reopen", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "reopen"] }
+          }
+        },
+        {
+          "name": "Complaint Status History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/history", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Feedback",
+      "item": [
+        {
+          "name": "Submit Rating & Feedback (Citizen Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent service, very fast repair!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "feedback"] }
+          }
+        },
+        {
+          "name": "List All Feedback (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/feedback", "host": ["{{baseUrl}}"], "path": ["feedback"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Services",
+      "item": [
+        {
+          "name": "List Municipal Services",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/services", "host": ["{{baseUrl}}"], "path": ["services"] }
+          }
+        },
+        {
+          "name": "Create Service (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bulky Waste Pickup\",\n  \"price\": 50,\n  \"description\": \"Special pickup for large furniture and appliances\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/services", "host": ["{{baseUrl}}"], "path": ["services"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Service Requests",
+      "item": [
+        {
+          "name": "Create Service Request (Citizen Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"{{serviceId}}\",\n  \"location\": \"123 Oak Street\",\n  \"quantity\": 1,\n  \"notes\": \"2 old sofas at front curb\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/service-requests", "host": ["{{baseUrl}}"], "path": ["service-requests"] }
+          }
+        },
+        {
+          "name": "List Service Requests (Admin / Citizen)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/service-requests", "host": ["{{baseUrl}}"], "path": ["service-requests"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Payments",
+      "item": [
+        {
+          "name": "Create Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceRequestId\": \"{{serviceRequestId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/checkout-session", "host": ["{{baseUrl}}"], "path": ["payments", "checkout-session"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] }
+          }
+        },
+        {
+          "name": "Get Unread Notification Count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/notifications/unread", "host": ["{{baseUrl}}"], "path": ["notifications", "unread"] }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}", "read"] }
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
+            "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["notifications", "read-all"] }
+          }
+        },
+        {
+          "name": "Run SLA Breach Notification Checker (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/notifications/check-sla-breaches", "host": ["{{baseUrl}}"], "path": ["notifications", "check-sla-breaches"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/audit-logs", "host": ["{{baseUrl}}"], "path": ["audit-logs"] }
+          }
+        },
+        {
+          "name": "Get Entity Audit History (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/audit-logs/COMPLAINT/{{complaintId}}", "host": ["{{baseUrl}}"], "path": ["audit-logs", "COMPLAINT", "{{complaintId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Analytics",
+      "item": [
+        {
+          "name": "Overview Dashboard (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/overview", "host": ["{{baseUrl}}"], "path": ["analytics", "overview"] }
+          }
+        },
+        {
+          "name": "Department Performance (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/departments", "host": ["{{baseUrl}}"], "path": ["analytics", "departments"] }
+          }
+        },
+        {
+          "name": "Category Statistics (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/categories", "host": ["{{baseUrl}}"], "path": ["analytics", "categories"] }
+          }
+        },
+        {
+          "name": "Staff Performance (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/staff", "host": ["{{baseUrl}}"], "path": ["analytics", "staff"] }
+          }
+        },
+        {
+          "name": "Time-Based Complaints (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/complaints?from=2026-01-01&to=2026-12-31", "host": ["{{baseUrl}}"], "path": ["analytics", "complaints"], "query": [{ "key": "from", "value": "2026-01-01" }, { "key": "to", "value": "2026-12-31" }] }
+          }
+        },
+        {
+          "name": "Services & Payments Report (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/services", "host": ["{{baseUrl}}"], "path": ["analytics", "services"] }
+          }
+        }
+      ]
+    }
+  ]
+}

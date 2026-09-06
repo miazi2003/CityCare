@@ -4,6 +4,9 @@ import {
   registerCitizenIntoDB,
   getCurrentUserFromDB,
   loginCitizenIntoDB,
+  getGoogleAuthUrl,
+  handleGoogleOAuthCallback,
+  handleGoogleIdToken,
 } from "./auth.service";
 
 // Controller for citizen registration
@@ -138,6 +141,100 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
+      data: null,
+    });
+  }
+};
+
+// Initiate Google OAuth 2.0 redirection or return URL
+export const initiateGoogleAuth = async (req: Request, res: Response) => {
+  try {
+    const url = getGoogleAuthUrl();
+
+    // If client requested JSON or set ?redirect=false, return the OAuth URL
+    if (
+      req.query.redirect === "false" ||
+      req.headers.accept?.includes("application/json")
+    ) {
+      return res.status(200).json({
+        success: true,
+        message: "Google OAuth URL generated successfully",
+        data: { url },
+      });
+    }
+
+    // Default: redirect browser to Google consent screen
+    return res.redirect(url);
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to initiate Google authentication",
+      data: null,
+    });
+  }
+};
+
+// Handle Google OAuth 2.0 callback
+export const googleAuthCallback = async (req: Request, res: Response) => {
+  try {
+    const { code, error } = req.query;
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: `Google OAuth error: ${error}`,
+        data: null,
+      });
+    }
+
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Authorization code is required from Google callback",
+        data: null,
+      });
+    }
+
+    const result = await handleGoogleOAuthCallback(code);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google authentication successful",
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Google authentication failed",
+      data: null,
+    });
+  }
+};
+
+// Handle direct Google ID Token verification (for SPAs, mobile apps, and direct testing)
+export const googleAuthToken = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken || typeof idToken !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "idToken is required in request body",
+        data: null,
+      });
+    }
+
+    const result = await handleGoogleIdToken(idToken);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google authentication successful",
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(401).json({
+      success: false,
+      message: error.message || "Invalid Google ID token",
       data: null,
     });
   }

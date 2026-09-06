@@ -11,7 +11,8 @@ model User {
   id           String      @id @default(uuid())
   name         String
   email        String      @unique
-  password     String
+  password     String?
+  googleId     String?     @unique
   role         UserRole    @default(CITIZEN)
   isActive     Boolean     @default(true)
   departmentId String?
@@ -28,6 +29,7 @@ model User {
   auditLogs              AuditLog[]
 
   @@index([departmentId])
+  @@index([googleId])
   @@map("users")
 }
 
