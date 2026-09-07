@@ -396,16 +396,16 @@ The API can be verified via:
 ### Sample Credentials
 ```text
 ADMIN USER:
-Email:    admin@civicflow.com
-Password: <configured-admin-password>
+Email:    yeasinmiazi01@gmail.com
+Password: 123456
 
 STAFF USER:
-Email:    staff@civicflow.com
-Password: <configured-staff-password>
+Email:    staff.mike@civicflow.com
+Password: staffPassword123!
 
 CITIZEN USER:
 Email:    citizen@example.com
-Password: <configured-citizen-password>
+Password: Password123!
 ```
 
 ### Sample Register Payload
