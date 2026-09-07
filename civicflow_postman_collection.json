@@ -1,505 +1,2141 @@
 {
   "info": {
     "name": "CivicFlow API",
-    "description": "Postman collection for CivicFlow — City Complaint & Service Request Platform Backend. Covers all 12 modules including authentication, complaint workflows, SLA management, paid services, Stripe payments, notifications, audit logs, and analytics.",
+    "description": "CivicFlow — City Complaint & Service Request Platform Backend API Postman Collection.\n\n### Platform Overview\nComprehensive REST API for municipal complaint lifecycle management, SLA monitoring, and paid municipal public service requests with Stripe payment processing.\n\n### User Roles & RBAC Matrix\n- **CITIZEN**: Can self-register, file complaints, view own complaints, confirm/close/reopen resolved complaints, leave 1-5 star ratings & feedback, request municipal services, and initiate Stripe checkout payments.\n- **STAFF**: Assigned to municipal departments; can view assigned complaints, advance workflow to IN_PROGRESS, resolve complaints with notes, and track SLA turnaround deadlines.\n- **ADMIN**: Full municipal system oversight; manages departments, categories with SLA hours, staff members, reviews/assigns complaints, monitors SLA breaches, views system-wide audit logs, and accesses analytics dashboards.\n\n### Core Workflows\n1. **Complaint Lifecycle**:\n   `Citizen Submit` ➔ `Admin Review` ➔ `Staff Assign` ➔ `Staff In-Progress` ➔ `Staff Resolve` ➔ `Citizen Close` ➔ `Citizen Rating/Feedback`\n2. **Paid Service & Stripe Payment**:\n   `Citizen Request` ➔ `Stripe Checkout Session` ➔ `Payment via Stripe` ➔ `Cryptographic Stripe Webhook (checkout.session.completed)` ➔ `Payment Verified & Marked PAID` ➔ `Service Fulfillment`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000/api/v1", "type": "string" },
-    { "key": "adminToken", "value": "", "type": "string" },
-    { "key": "staffToken", "value": "", "type": "string" },
-    { "key": "citizenToken", "value": "", "type": "string" },
-    { "key": "complaintId", "value": "", "type": "string" },
-    { "key": "serviceId", "value": "", "type": "string" },
-    { "key": "serviceRequestId", "value": "", "type": "string" },
-    { "key": "notificationId", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "citizenToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "departmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "complaintId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceRequestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "1. Auth",
+      "name": "01. Health",
+      "item": [
+        {
+          "name": "Get API Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "[Public] Health check endpoint to verify backend service uptime and responsiveness."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Authentication",
       "item": [
         {
           "name": "Register Citizen",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Jane Citizen\",\n  \"email\": \"citizen@example.com\",\n  \"password\": \"Password123!\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "[Public] Self-registration for citizens. Accounts are strictly defaulted to CITIZEN role."
           }
         },
         {
-          "name": "Login (Admin / Staff / Citizen)",
+          "name": "Citizen Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"citizenToken\", jsonData.data.token);",
+                  "    console.log(\"Saved citizenToken:\", jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"citizen@example.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "[Public] Authenticates citizen user with email/password and automatically sets {{citizenToken}}."
+          }
+        },
+        {
+          "name": "Staff Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"staffToken\", jsonData.data.token);",
+                  "    console.log(\"Saved staffToken:\", jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff.mike@civicflow.com\",\n  \"password\": \"staffPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "[Public] Authenticates staff user with email/password and automatically sets {{staffToken}}."
+          }
+        },
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set(\"adminToken\", jsonData.data.token);",
+                  "    console.log(\"Saved adminToken:\", jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@civicflow.com\",\n  \"password\": \"admin123456\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "[Public] Authenticates administrator user with email/password and automatically sets {{adminToken}}."
           }
         },
         {
-          "name": "Get Current User Profile (Me)",
+          "name": "Get Current User Profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "[Authenticated] Retrieves the authenticated user's profile details and role."
+          }
+        },
+        {
+          "name": "Logout User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "[Public] Explicitly logs out user session."
           }
         },
         {
           "name": "Google OAuth URL (JSON Mode)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/google?redirect=false", "host": ["{{baseUrl}}"], "path": ["auth", "google"], "query": [{ "key": "redirect", "value": "false" }] }
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/google?redirect=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ],
+              "query": [
+                {
+                  "key": "redirect",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "[Public] Retrieves Google OAuth 2.0 authorization URL in JSON format."
           }
         },
         {
           "name": "Google ID Token Login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"idToken\": \"SAMPLE_GOOGLE_ID_TOKEN\"\n}"
+              "raw": "{\n  \"idToken\": \"SAMPLE_GOOGLE_ID_TOKEN_HERE\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/auth/google", "host": ["{{baseUrl}}"], "path": ["auth", "google"] }
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            },
+            "description": "[Public] Authenticates or signs up citizen using Google OAuth ID token."
           }
         }
       ]
     },
     {
-      "name": "2. Departments",
+      "name": "03. Departments",
       "item": [
         {
-          "name": "List Departments",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/departments", "host": ["{{baseUrl}}"], "path": ["departments"] }
-          }
-        },
-        {
-          "name": "Create Department (Admin Only)",
+          "name": "Create Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"departmentId\", jsonData.data.id);",
+                  "    console.log(\"Saved departmentId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Public Works\",\n  \"description\": \"Road maintenance and municipal structures\"\n}"
+              "raw": "{\n  \"name\": \"Public Works\",\n  \"description\": \"Roads, streetlights, bridges, and municipal infrastructure\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/departments", "host": ["{{baseUrl}}"], "path": ["departments"] }
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            },
+            "description": "[Admin only] Creates a new municipal department and automatically saves {{departmentId}}."
           }
         },
         {
-          "name": "Update Department (Admin Only)",
+          "name": "Get All Departments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ]
+            },
+            "description": "[Public] Lists all active municipal departments."
+          }
+        },
+        {
+          "name": "Get Department By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "{{departmentId}}"
+              ]
+            },
+            "description": "[Public] Retrieves details of a specific department by ID."
+          }
+        },
+        {
+          "name": "Update Department",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Public Works & Infrastructure\"\n}"
+              "raw": "{\n  \"name\": \"Public Works & Infrastructure\",\n  \"description\": \"Updated municipal infrastructure description\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/departments/:id", "host": ["{{baseUrl}}"], "path": ["departments", ":id"] }
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "{{departmentId}}"
+              ]
+            },
+            "description": "[Admin only] Updates department name and description."
           }
         },
         {
-          "name": "Deactivate Department (Admin Only)",
+          "name": "Deactivate Department",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/departments/:id/deactivate", "host": ["{{baseUrl}}"], "path": ["departments", ":id", "deactivate"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/departments/{{departmentId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "{{departmentId}}",
+                "deactivate"
+              ]
+            },
+            "description": "[Admin only] Toggles department active status."
           }
         }
       ]
     },
     {
-      "name": "3. Categories",
+      "name": "04. Categories",
       "item": [
         {
-          "name": "List Categories",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
-          }
-        },
-        {
-          "name": "Create Category (Admin Only)",
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"categoryId\", jsonData.data.id);",
+                  "    console.log(\"Saved categoryId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Pothole Repair\",\n  \"slaHours\": 48,\n  \"departmentId\": \"DEPARTMENT_ID_HERE\"\n}"
+              "raw": "{\n  \"name\": \"Pothole Repair\",\n  \"description\": \"Road surface damage and asphalt repair\",\n  \"slaHours\": 48,\n  \"departmentId\": \"{{departmentId}}\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "[Admin only] Creates a complaint category with SLA turnaround hours and saves {{categoryId}}."
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "[Public] Lists all active categories and their assigned departments."
+          }
+        },
+        {
+          "name": "Get Category By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "[Public] Retrieves details of a specific category."
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Emergency Pothole Repair\",\n  \"slaHours\": 24\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "[Admin only] Updates category name and SLA turnaround hours."
+          }
+        },
+        {
+          "name": "Deactivate Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}",
+                "deactivate"
+              ]
+            },
+            "description": "[Admin only] Toggles category active status."
           }
         }
       ]
     },
     {
-      "name": "4. Staff",
+      "name": "05. Staff",
       "item": [
         {
-          "name": "List Staff (Admin Only)",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/staff", "host": ["{{baseUrl}}"], "path": ["staff"] }
-          }
-        },
-        {
-          "name": "Create Staff (Admin Only)",
+          "name": "Create Staff",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"staffId\", jsonData.data.id);",
+                  "    console.log(\"Saved staffId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Officer John\",\n  \"email\": \"officer.john@civicflow.gov\",\n  \"password\": \"Password123!\",\n  \"departmentId\": \"DEPARTMENT_ID_HERE\"\n}"
+              "raw": "{\n  \"name\": \"Officer Mike\",\n  \"email\": \"staff.mike@civicflow.com\",\n  \"password\": \"staffPassword123!\",\n  \"departmentId\": \"{{departmentId}}\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/staff", "host": ["{{baseUrl}}"], "path": ["staff"] }
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff"
+              ]
+            },
+            "description": "[Admin only] Creates a new staff member linked to a department and saves {{staffId}}."
+          }
+        },
+        {
+          "name": "Get All Staff",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff"
+              ]
+            },
+            "description": "[Admin only] Lists all staff members across departments."
+          }
+        },
+        {
+          "name": "Get Staff By Department",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/department/{{departmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff",
+                "department",
+                "{{departmentId}}"
+              ]
+            },
+            "description": "[Admin only] Lists staff members belonging to a specific department."
+          }
+        },
+        {
+          "name": "Get Staff By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staffId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff",
+                "{{staffId}}"
+              ]
+            },
+            "description": "[Admin only] Retrieves profile of a specific staff member."
+          }
+        },
+        {
+          "name": "Update Staff",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Officer Michael Davis\",\n  \"departmentId\": \"{{departmentId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staffId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff",
+                "{{staffId}}"
+              ]
+            },
+            "description": "[Admin only] Updates staff name or transfers to another department."
+          }
+        },
+        {
+          "name": "Deactivate Staff",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/staff/{{staffId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "staff",
+                "{{staffId}}",
+                "deactivate"
+              ]
+            },
+            "description": "[Admin only] Toggles staff active status."
           }
         }
       ]
     },
     {
-      "name": "5. Complaints",
+      "name": "06. Complaints",
       "item": [
         {
-          "name": "Create Complaint (Citizen Only)",
+          "name": "Create Complaint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"complaintId\", jsonData.data.id);",
+                  "    console.log(\"Saved complaintId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Broken Streetlight\",\n  \"description\": \"Streetlight flickering on 5th Avenue\",\n  \"location\": \"5th Avenue, Corner 2\",\n  \"categoryId\": \"CATEGORY_ID_HERE\",\n  \"departmentId\": \"DEPARTMENT_ID_HERE\",\n  \"priority\": \"HIGH\"\n}"
+              "raw": "{\n  \"title\": \"Broken Streetlight on Elm Street\",\n  \"description\": \"Streetlight fixture #42 is flickering and dark at night creating hazards.\",\n  \"location\": \"123 Elm St, Ward 4\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"priority\": \"MEDIUM\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/complaints", "host": ["{{baseUrl}}"], "path": ["complaints"] }
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "[Citizen only] Lodges a municipal complaint with category & location; auto-calculates SLA dueAt and saves {{complaintId}}."
           }
         },
         {
-          "name": "Get My Complaints (Citizen Only)",
+          "name": "Get My Complaints",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/complaints/my", "host": ["{{baseUrl}}"], "path": ["complaints", "my"] }
-          }
-        },
-        {
-          "name": "Review Complaint (Admin Only)",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/review", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "review"] }
-          }
-        },
-        {
-          "name": "Assign Complaint (Admin Only)",
-          "request": {
-            "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"staffId\": \"STAFF_USER_ID_HERE\"\n}"
+            "url": {
+              "raw": "{{baseUrl}}/complaints/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "my"
+              ]
             },
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/assign", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "assign"] }
+            "description": "[Citizen only] Lists all complaints filed by the authenticated citizen."
           }
         },
         {
-          "name": "Start Work (Staff: IN_PROGRESS)",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/status", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "status"] }
-          }
-        },
-        {
-          "name": "Resolve Complaint (Staff Only)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{staffToken}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"note\": \"Replaced the faulty LED bulb and verified circuit stability.\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/resolve", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "resolve"] }
-          }
-        },
-        {
-          "name": "Close Complaint (Citizen Only)",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/close", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "close"] }
-          }
-        },
-        {
-          "name": "Reopen Complaint (Citizen Only)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"note\": \"Light stopped working again after rain.\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/reopen", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "reopen"] }
-          }
-        },
-        {
-          "name": "Complaint Status History",
+          "name": "Get All Complaints",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/history", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "history"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints"
+              ]
+            },
+            "description": "[Admin only] Lists all municipal complaints across all departments and citizens."
+          }
+        },
+        {
+          "name": "Get Assigned Complaints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/assigned",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "assigned"
+              ]
+            },
+            "description": "[Staff only] Lists complaints currently assigned to the authenticated staff member."
+          }
+        },
+        {
+          "name": "Get Complaint By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}"
+              ]
+            },
+            "description": "[Authenticated] Retrieves full details of a complaint (owner citizen, assigned staff, or admin)."
+          }
+        },
+        {
+          "name": "Review Complaint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"UNDER_REVIEW\",\n  \"note\": \"Reviewed by dispatcher and confirmed valid complaint\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "review"
+              ]
+            },
+            "description": "[Admin only] Reviews complaint and updates status to UNDER_REVIEW or REJECTED with note."
+          }
+        },
+        {
+          "name": "Assign Staff",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staffId\": \"{{staffId}}\",\n  \"note\": \"Assigned to department field engineer for on-site repair\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "assign"
+              ]
+            },
+            "description": "[Admin only] Assigns staff member to complaint (advances status to ASSIGNED)."
+          }
+        },
+        {
+          "name": "Update Complaint Status (In Progress)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"note\": \"Field crew arrived at location and commenced repairs\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "status"
+              ]
+            },
+            "description": "[Staff only] Assigned staff updates status from ASSIGNED to IN_PROGRESS."
+          }
+        },
+        {
+          "name": "Resolve Complaint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Streetlight fixture and wiring replaced. Verified fully illuminated.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "resolve"
+              ]
+            },
+            "description": "[Staff only] Assigned staff marks complaint as RESOLVED with resolution notes."
+          }
+        },
+        {
+          "name": "Close Complaint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Verified streetlight is working properly. Closing complaint.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "close"
+              ]
+            },
+            "description": "[Citizen only] Citizen confirms resolution and closes the complaint (advances status to CLOSED)."
+          }
+        },
+        {
+          "name": "Reopen Complaint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Light started flickering again after 2 days\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/reopen",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "reopen"
+              ]
+            },
+            "description": "[Citizen only] Citizen reopens a resolved or closed complaint if issue persists."
+          }
+        },
+        {
+          "name": "Cancel Complaint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Issue was resolved by utility company directly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "cancel"
+              ]
+            },
+            "description": "[Citizen only] Citizen cancels own complaint before field work starts."
+          }
+        },
+        {
+          "name": "Get Complaint History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "history"
+              ]
+            },
+            "description": "[Authenticated] Retrieves complete audit trail of status transitions and operator notes for complaint."
           }
         }
       ]
     },
     {
-      "name": "6. Feedback",
+      "name": "07. SLA",
       "item": [
         {
-          "name": "Submit Rating & Feedback (Citizen Only)",
+          "name": "Get SLA Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/sla/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "sla",
+                "summary"
+              ]
+            },
+            "description": "[Admin only] Retrieves aggregate SLA compliance summary (active, compliant, breached)."
+          }
+        },
+        {
+          "name": "Get Breached Complaints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/sla/breached",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "sla",
+                "breached"
+              ]
+            },
+            "description": "[Admin only] Lists all active complaints that have exceeded their SLA turnaround deadline."
+          }
+        },
+        {
+          "name": "Get My SLA Complaints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/sla/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "sla",
+                "my"
+              ]
+            },
+            "description": "[Staff only] Lists assigned active complaints ordered by closest approaching SLA due date."
+          }
+        },
+        {
+          "name": "Trigger SLA Audit Check",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent service, very fast repair!\"\n}"
+            "url": {
+              "raw": "{{baseUrl}}/notifications/check-sla",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "check-sla"
+              ]
             },
-            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "feedback"] }
-          }
-        },
-        {
-          "name": "List All Feedback (Admin Only)",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/feedback", "host": ["{{baseUrl}}"], "path": ["feedback"] }
+            "description": "[Admin only] Scans active complaints for SLA breaches and triggers automated notifications."
           }
         }
       ]
     },
     {
-      "name": "7. Services",
+      "name": "08. Feedback",
       "item": [
         {
-          "name": "List Municipal Services",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/services", "host": ["{{baseUrl}}"], "path": ["services"] }
-          }
-        },
-        {
-          "name": "Create Service (Admin Only)",
+          "name": "Create Complaint Feedback",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Bulky Waste Pickup\",\n  \"price\": 50,\n  \"description\": \"Special pickup for large furniture and appliances\"\n}"
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Prompt repair and clear communication from staff!\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/services", "host": ["{{baseUrl}}"], "path": ["services"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "8. Service Requests",
-      "item": [
-        {
-          "name": "Create Service Request (Citizen Only)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"serviceId\": \"{{serviceId}}\",\n  \"location\": \"123 Oak Street\",\n  \"quantity\": 1,\n  \"notes\": \"2 old sofas at front curb\"\n}"
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "feedback"
+              ]
             },
-            "url": { "raw": "{{baseUrl}}/service-requests", "host": ["{{baseUrl}}"], "path": ["service-requests"] }
+            "description": "[Citizen only] Citizen submits 1-5 star rating and optional comments on resolved/closed complaint."
           }
         },
         {
-          "name": "List Service Requests (Admin / Citizen)",
+          "name": "Get Complaint Feedback",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/service-requests", "host": ["{{baseUrl}}"], "path": ["service-requests"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "feedback"
+              ]
+            },
+            "description": "[Authenticated] Retrieves feedback submitted for a specific complaint."
+          }
+        },
+        {
+          "name": "Update Complaint Feedback",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated feedback rating after two weeks of observation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "feedback"
+              ]
+            },
+            "description": "[Citizen only] Citizen updates their previously submitted rating and review."
+          }
+        },
+        {
+          "name": "Delete Complaint Feedback",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/complaints/{{complaintId}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "complaints",
+                "{{complaintId}}",
+                "feedback"
+              ]
+            },
+            "description": "[Citizen only] Citizen deletes their submitted feedback."
+          }
+        },
+        {
+          "name": "Get All Feedback",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "feedback"
+              ]
+            },
+            "description": "[Admin only] Lists all citizen feedback and ratings across all complaints."
           }
         }
       ]
     },
     {
-      "name": "9. Payments",
+      "name": "09. Municipal Services",
+      "item": [
+        {
+          "name": "Create Municipal Service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"serviceId\", jsonData.data.id);",
+                  "    console.log(\"Saved serviceId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bulk Waste Pickup\",\n  \"description\": \"Curbside collection of large furniture and domestic appliances\",\n  \"price\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "[Admin only] Creates a paid municipal public service in the catalog and saves {{serviceId}}."
+          }
+        },
+        {
+          "name": "Get All Municipal Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ]
+            },
+            "description": "[Public] Lists all active paid municipal public services."
+          }
+        },
+        {
+          "name": "Get Municipal Service By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            },
+            "description": "[Public] Retrieves details and pricing of a specific municipal service."
+          }
+        },
+        {
+          "name": "Update Municipal Service",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Express Bulk Waste Pickup\",\n  \"price\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}"
+              ]
+            },
+            "description": "[Admin only] Updates pricing or description of a municipal service."
+          }
+        },
+        {
+          "name": "Deactivate Municipal Service",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{serviceId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{serviceId}}",
+                "deactivate"
+              ]
+            },
+            "description": "[Admin only] Toggles service availability."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Service Requests",
+      "item": [
+        {
+          "name": "Create Service Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"serviceRequestId\", jsonData.data.id);",
+                  "    console.log(\"Saved serviceRequestId:\", jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"{{serviceId}}\",\n  \"location\": \"456 Oak Avenue, Springfield\",\n  \"quantity\": 2,\n  \"notes\": \"Two large couches on driveway ready for curbside pickup\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/service-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests"
+              ]
+            },
+            "description": "[Citizen only] Citizen submits a paid municipal service request and saves {{serviceRequestId}}."
+          }
+        },
+        {
+          "name": "Get My Service Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/service-requests/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests",
+                "my"
+              ]
+            },
+            "description": "[Citizen only] Lists all municipal service requests filed by authenticated citizen."
+          }
+        },
+        {
+          "name": "Get All Service Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/service-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests"
+              ]
+            },
+            "description": "[Admin only] Lists all municipal service requests across citizens."
+          }
+        },
+        {
+          "name": "Get Service Request By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/service-requests/{{serviceRequestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}"
+              ]
+            },
+            "description": "[Authenticated] Retrieves details of a specific service request (owner citizen or admin)."
+          }
+        },
+        {
+          "name": "Update Service Request Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\",\n  \"notes\": \"Collection vehicle dispatched\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/service-requests/{{serviceRequestId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "status"
+              ]
+            },
+            "description": "[Admin only] Updates service request operational status (PROCESSING, COMPLETED, CANCELLED)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Payments",
       "item": [
         {
           "name": "Create Stripe Checkout Session",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{citizenToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/service-requests/{{serviceRequestId}}/payment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "payment"
+              ]
+            },
+            "description": "[Citizen only] Creates a Stripe Checkout Session for a pending service request and returns the hosted Stripe payment URL."
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/service-requests/{{serviceRequestId}}/payment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "service-requests",
+                "{{serviceRequestId}}",
+                "payment"
+              ]
+            },
+            "description": "[Authenticated] Retrieves payment transaction details and status (PENDING, PAID, FAILED) for a service request."
+          }
+        },
+        {
+          "name": "Stripe Webhook Callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Stripe-Signature",
+                "value": "t=1700000000,v1=sample_webhook_signature"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"serviceRequestId\": \"{{serviceRequestId}}\"\n}"
+              "raw": "{\n  \"id\": \"evt_test_webhook_event_sample\",\n  \"type\": \"checkout.session.completed\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"cs_test_sample_session_id\",\n      \"payment_status\": \"paid\",\n      \"metadata\": {\n        \"serviceRequestId\": \"{{serviceRequestId}}\",\n        \"citizenId\": \"SAMPLE_CITIZEN_ID\"\n      }\n    }\n  }\n}"
             },
-            "url": { "raw": "{{baseUrl}}/payments/checkout-session", "host": ["{{baseUrl}}"], "path": ["payments", "checkout-session"] }
+            "url": {
+              "raw": "{{baseUrl}}/payments/stripe/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "stripe",
+                "webhook"
+              ]
+            },
+            "description": "[Public / Stripe Gateway] Handles raw signed Stripe webhook events to verify signature and atomically mark payment as PAID."
           }
         }
       ]
     },
     {
-      "name": "10. Notifications",
+      "name": "12. Notifications",
       "item": [
         {
           "name": "Get My Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.length > 0 && jsonData.data[0].id) {",
+                  "    pm.collectionVariables.set(\"notificationId\", jsonData.data[0].id);",
+                  "    console.log(\"Saved notificationId:\", jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "my"
+              ]
+            },
+            "description": "[Authenticated] Retrieves notification list for authenticated user and saves first {{notificationId}}."
           }
         },
         {
-          "name": "Get Unread Notification Count",
+          "name": "Get Unread Notifications",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications/unread", "host": ["{{baseUrl}}"], "path": ["notifications", "unread"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread"
+              ]
+            },
+            "description": "[Authenticated] Retrieves all unread notifications for authenticated user."
           }
         },
         {
-          "name": "Mark Notification as Read",
+          "name": "Mark Notification As Read",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications/{{notificationId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications", "{{notificationId}}", "read"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": "[Authenticated] Marks a specific notification as read."
           }
         },
         {
-          "name": "Mark All Notifications Read",
+          "name": "Mark All Notifications As Read",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{citizenToken}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["notifications", "read-all"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{citizenToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "[Authenticated] Batch marks all notifications of authenticated user as read."
           }
         },
         {
-          "name": "Run SLA Breach Notification Checker (Admin Only)",
+          "name": "Get All Notifications",
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/notifications/check-sla-breaches", "host": ["{{baseUrl}}"], "path": ["notifications", "check-sla-breaches"] }
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            },
+            "description": "[Admin only] Lists all system notifications across all users."
           }
         }
       ]
     },
     {
-      "name": "11. Audit Logs",
+      "name": "13. Audit Logs",
       "item": [
         {
-          "name": "List Audit Logs (Admin Only)",
+          "name": "Get All Audit Logs",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/audit-logs", "host": ["{{baseUrl}}"], "path": ["audit-logs"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ]
+            },
+            "description": "[Admin only] Retrieves system audit logs with optional filters (action, entity, userId)."
           }
         },
         {
-          "name": "Get Entity Audit History (Admin Only)",
+          "name": "Get Entity Audit Trail",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/audit-logs/COMPLAINT/{{complaintId}}", "host": ["{{baseUrl}}"], "path": ["audit-logs", "COMPLAINT", "{{complaintId}}"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs/COMPLAINT/{{complaintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs",
+                "COMPLAINT",
+                "{{complaintId}}"
+              ]
+            },
+            "description": "[Admin only] Retrieves full chronological audit history for a specific entity ID."
           }
         }
       ]
     },
     {
-      "name": "12. Analytics",
+      "name": "14. Analytics",
       "item": [
         {
-          "name": "Overview Dashboard (Admin Only)",
+          "name": "Get Overview Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/overview", "host": ["{{baseUrl}}"], "path": ["analytics", "overview"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "overview"
+              ]
+            },
+            "description": "[Admin only] Retrieves high-level citywide metrics, complaint volume, and resolution rates."
           }
         },
         {
-          "name": "Department Performance (Admin Only)",
+          "name": "Get Department Performance Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/departments", "host": ["{{baseUrl}}"], "path": ["analytics", "departments"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "departments"
+              ]
+            },
+            "description": "[Admin only] Department-level complaint volume, average resolution times, and SLA compliance."
           }
         },
         {
-          "name": "Category Statistics (Admin Only)",
+          "name": "Get Category Performance Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/categories", "host": ["{{baseUrl}}"], "path": ["analytics", "categories"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "categories"
+              ]
+            },
+            "description": "[Admin only] Category-wise distribution and resolution statistics."
           }
         },
         {
-          "name": "Staff Performance (Admin Only)",
+          "name": "Get Staff Performance Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/staff", "host": ["{{baseUrl}}"], "path": ["analytics", "staff"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/staff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "staff"
+              ]
+            },
+            "description": "[Admin only] Staff-level workload, assigned tasks, and resolution performance."
           }
         },
         {
-          "name": "Time-Based Complaints (Admin Only)",
+          "name": "Get Time-Based Complaint Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/complaints?from=2026-01-01&to=2026-12-31", "host": ["{{baseUrl}}"], "path": ["analytics", "complaints"], "query": [{ "key": "from", "value": "2026-01-01" }, { "key": "to", "value": "2026-12-31" }] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/complaints?from=2026-01-01&to=2026-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "complaints"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31"
+                }
+              ]
+            },
+            "description": "[Admin only] Time-series complaint volume and metrics across specified date ranges."
           }
         },
         {
-          "name": "Services & Payments Report (Admin Only)",
+          "name": "Get Service & Payment Revenue Analytics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": { "raw": "{{baseUrl}}/analytics/services", "host": ["{{baseUrl}}"], "path": ["analytics", "services"] }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analytics",
+                "services"
+              ]
+            },
+            "description": "[Admin only] Revenue analytics and request volume metrics for paid municipal services."
           }
         }
       ]
