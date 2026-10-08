@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiRequest } from "@/lib/api-client";
 import type { LoginInput, LoginResponse } from "@/types";
@@ -164,6 +165,13 @@ export default function LoginPage() {
           >
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>
+
+          <p className="text-center text-sm text-slate-600">
+            Need an account?{" "}
+            <Link className="font-medium text-slate-950 underline" href="/register">
+              Register as a citizen
+            </Link>
+          </p>
         </form>
       </section>
     </main>
