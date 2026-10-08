@@ -2,7 +2,9 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-provider";
+import { getRoleHomeRoute } from "@/lib/auth-routes";
 import { apiRequest } from "@/lib/api-client";
 import type { LoginInput, LoginResponse } from "@/types";
 
@@ -29,6 +31,7 @@ const validateLogin = (input: LoginInput): FieldErrors => {
 };
 
 export default function LoginPage() {
+  const router = useRouter();
   const { setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +84,7 @@ export default function LoginPage() {
       setSession(result.data);
       setPassword("");
       setSuccessMessage(result.message);
+      router.replace(getRoleHomeRoute(result.data.user.role));
       return;
     }
 
