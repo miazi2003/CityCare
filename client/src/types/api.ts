@@ -19,3 +19,23 @@ export type ApiError = {
 };
 
 export type ApiResult<T> = ApiResponse<T> | ApiError;
+
+export type ApiClientSuccess<T> = ApiResponse<T> & {
+  status: number;
+};
+
+export type ApiClientEmptySuccess = ApiResponse<null> & {
+  status: number;
+};
+
+export type ApiClientErrorKind = "config" | "network" | "response";
+
+export type ApiClientError = ApiError & {
+  status: number | null;
+  kind: ApiClientErrorKind;
+};
+
+export type ApiClientResult<T> =
+  | ApiClientSuccess<T>
+  | ApiClientEmptySuccess
+  | ApiClientError;
