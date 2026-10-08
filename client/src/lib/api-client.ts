@@ -4,6 +4,7 @@ import type {
   ApiClientSuccess,
   JsonValue,
 } from "@/types";
+import { getAuthToken } from "./token";
 
 export type HttpMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
@@ -76,6 +77,12 @@ export const apiRequest = async <T>(
 
   if (body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  const token = getAuthToken();
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   let response: Response;
