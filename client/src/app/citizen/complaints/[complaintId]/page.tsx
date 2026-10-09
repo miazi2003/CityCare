@@ -101,6 +101,73 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+type ConfirmModalProps = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmVariant?: "danger" | "primary";
+  isPending: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+function ConfirmModal({
+  title,
+  description,
+  confirmLabel,
+  confirmVariant = "primary",
+  isPending,
+  error,
+  onConfirm,
+  onCancel,
+}: ConfirmModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+        <h3 className="text-lg font-bold text-slate-950" id="modal-title">
+          {title}
+        </h3>
+        <p className="mt-2 text-sm text-slate-600">{description}</p>
+
+        {error ? (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isPending}
+            onClick={onCancel}
+            type="button"
+          >
+            Go back
+          </button>
+          <button
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              confirmVariant === "danger"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-emerald-600 hover:bg-emerald-700"
+            }`}
+            disabled={isPending}
+            onClick={onConfirm}
+            type="button"
+          >
+            {isPending ? "Processing…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ComplaintDetailContent() {
   const { complaintId } = useParams<{ complaintId: string }>();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
@@ -110,16 +177,19 @@ function ComplaintDetailContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Mutation action state
+  const [activeAction, setActiveAction] = useState<"cancel" | "close" | null>(null);
+  const [isActionPending, setIsActionPending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadComplaintData() {
+    async function loadData() {
       if (!complaintId) return;
-
-      setIsLoading(true);
-      setError(null);
-      setIsNotFound(false);
 
       const [complaintResult, historyResult, feedbackResult] = await Promise.all([
         apiRequest<Complaint>(`complaints/${encodeURIComponent(complaintId)}`),
@@ -131,13 +201,13 @@ function ComplaintDetailContent() {
 
       if (complaintResult.success && complaintResult.data) {
         setComplaint(complaintResult.data);
+        setIsNotFound(false);
+        setError(null);
       } else if (
         !complaintResult.success &&
         (complaintResult.status === 404 || complaintResult.status === 403)
       ) {
         setIsNotFound(true);
-        setIsLoading(false);
-        return;
       } else {
         setError(complaintResult.message || "Failed to load complaint details.");
       }
@@ -159,12 +229,60 @@ function ComplaintDetailContent() {
       setIsLoading(false);
     }
 
-    void loadComplaintData();
+    void loadData();
 
     return () => {
       isMounted = false;
     };
-  }, [complaintId]);
+  }, [complaintId, refreshKey]);
+
+  const handleCancelAction = async () => {
+    if (!complaintId || isActionPending) return;
+
+    setIsActionPending(true);
+    setActionError(null);
+
+    const result = await apiRequest<Complaint>(
+      `complaints/${encodeURIComponent(complaintId)}/cancel`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    setIsActionPending(false);
+
+    if (result.success) {
+      setActionSuccessMessage(result.message || "Complaint cancelled successfully.");
+      setActiveAction(null);
+      setRefreshKey((k) => k + 1);
+    } else {
+      setActionError(result.message || "Failed to cancel complaint.");
+    }
+  };
+
+  const handleCloseAction = async () => {
+    if (!complaintId || isActionPending) return;
+
+    setIsActionPending(true);
+    setActionError(null);
+
+    const result = await apiRequest<Complaint>(
+      `complaints/${encodeURIComponent(complaintId)}/close`,
+      {
+        method: "PATCH",
+      }
+    );
+
+    setIsActionPending(false);
+
+    if (result.success) {
+      setActionSuccessMessage(result.message || "Complaint confirmed and closed successfully.");
+      setActiveAction(null);
+      setRefreshKey((k) => k + 1);
+    } else {
+      setActionError(result.message || "Failed to close complaint.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -210,6 +328,9 @@ function ComplaintDetailContent() {
     );
   }
 
+  const canCancel = complaint.status === "SUBMITTED" || complaint.status === "UNDER_REVIEW";
+  const canClose = complaint.status === "RESOLVED";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Top back navigation */}
@@ -222,38 +343,90 @@ function ComplaintDetailContent() {
         </Link>
       </div>
 
+      {/* Action success alert */}
+      {actionSuccessMessage ? (
+        <div
+          className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          role="status"
+        >
+          <span>{actionSuccessMessage}</span>
+          <button
+            className="text-xs font-semibold uppercase tracking-wider text-emerald-700 hover:text-emerald-900"
+            onClick={() => setActionSuccessMessage(null)}
+            type="button"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
       {/* Complaint Overview Header */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(
-              complaint.status
-            )}`}
-          >
-            {formatStatus(complaint.status)}
-          </span>
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getPriorityBadgeClasses(
-              complaint.priority
-            )}`}
-          >
-            {formatStatus(complaint.priority)} priority
-          </span>
-          {complaint.slaStatus ? (
-            <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getSlaBadgeClasses(
-                complaint.slaStatus
-              )}`}
-            >
-              SLA: {formatStatus(complaint.slaStatus)}
-            </span>
-          ) : null}
-        </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(
+                  complaint.status
+                )}`}
+              >
+                {formatStatus(complaint.status)}
+              </span>
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getPriorityBadgeClasses(
+                  complaint.priority
+                )}`}
+              >
+                {formatStatus(complaint.priority)} priority
+              </span>
+              {complaint.slaStatus ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getSlaBadgeClasses(
+                    complaint.slaStatus
+                  )}`}
+                >
+                  SLA: {formatStatus(complaint.slaStatus)}
+                </span>
+              ) : null}
+            </div>
 
-        <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-          {complaint.title}
-        </h1>
-        <p className="mt-1 font-mono text-xs text-slate-400">Reference ID: {complaint.id}</p>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              {complaint.title}
+            </h1>
+            <p className="mt-1 font-mono text-xs text-slate-400">Reference ID: {complaint.id}</p>
+          </div>
+
+          {/* Action buttons in header */}
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {canCancel ? (
+              <button
+                className="rounded-lg border border-red-300 bg-white px-3.5 py-2 text-xs font-medium text-red-700 shadow-xs transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isActionPending}
+                onClick={() => {
+                  setActionError(null);
+                  setActiveAction("cancel");
+                }}
+                type="button"
+              >
+                Cancel Complaint
+              </button>
+            ) : null}
+
+            {canClose ? (
+              <button
+                className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isActionPending}
+                onClick={() => {
+                  setActionError(null);
+                  setActiveAction("close");
+                }}
+                type="button"
+              >
+                Confirm &amp; Close
+              </button>
+            ) : null}
+          </div>
+        </div>
 
         <div className="mt-6 border-t border-slate-100 pt-6">
           <h2 className="text-sm font-semibold text-slate-900">Description</h2>
@@ -408,6 +581,44 @@ function ComplaintDetailContent() {
           )}
         </section>
       ) : null}
+
+      {/* Cancel confirmation modal */}
+      {activeAction === "cancel" ? (
+        <ConfirmModal
+          confirmLabel="Yes, cancel complaint"
+          confirmVariant="danger"
+          description="Are you sure you want to cancel this complaint? This will permanently mark the complaint as cancelled and prevent further review or work by municipal staff."
+          error={actionError}
+          isPending={isActionPending}
+          onCancel={() => {
+            if (!isActionPending) {
+              setActiveAction(null);
+              setActionError(null);
+            }
+          }}
+          onConfirm={handleCancelAction}
+          title="Cancel Complaint"
+        />
+      ) : null}
+
+      {/* Close confirmation modal */}
+      {activeAction === "close" ? (
+        <ConfirmModal
+          confirmLabel="Yes, confirm & close"
+          confirmVariant="primary"
+          description="Are you satisfied with the staff resolution and ready to close this complaint? Once closed, this complaint will be finalized."
+          error={actionError}
+          isPending={isActionPending}
+          onCancel={() => {
+            if (!isActionPending) {
+              setActiveAction(null);
+              setActionError(null);
+            }
+          }}
+          onConfirm={handleCloseAction}
+          title="Confirm Resolution & Close Complaint"
+        />
+      ) : null}
     </div>
   );
 }
@@ -425,4 +636,3 @@ export default function CitizenComplaintDetailPage() {
     </Suspense>
   );
 }
-
