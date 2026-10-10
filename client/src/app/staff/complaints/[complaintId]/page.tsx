@@ -135,7 +135,7 @@ function ConfirmModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
       role="dialog"
     >
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
         <h3 className="text-lg font-bold text-slate-950" id="modal-title">
           {title}
         </h3>

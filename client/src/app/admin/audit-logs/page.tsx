@@ -343,7 +343,7 @@ export default function AdminAuditLogsPage() {
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-700">
+            <table className="min-w-[720px] w-full text-left text-sm text-slate-700">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-5 py-3.5" scope="col">Timestamp</th>

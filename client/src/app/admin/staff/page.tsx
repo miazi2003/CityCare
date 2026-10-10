@@ -566,7 +566,7 @@ export default function AdminStaffPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="create-staff-modal-title">
               Create Staff Account
             </h2>
@@ -683,7 +683,7 @@ export default function AdminStaffPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="edit-staff-modal-title">
               Edit Staff Account
             </h2>
@@ -812,7 +812,7 @@ export default function AdminStaffPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="deactivate-staff-modal-title">
               Deactivate Staff Account
             </h2>

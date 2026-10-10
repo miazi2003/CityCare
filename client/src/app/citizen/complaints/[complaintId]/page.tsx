@@ -186,7 +186,7 @@ function ConfirmModal({
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
         <h3 className="text-lg font-bold text-slate-950" id="modal-title">
           {title}
         </h3>

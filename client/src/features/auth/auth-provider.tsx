@@ -24,8 +24,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const shouldClearRestoredSession = (status: number | null) =>
-  status === 401 || status === 403 || status === 404;
+const shouldClearRestoredSession = (status: number | null) => status === 401;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -46,6 +45,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setIsLoading(false);
   }, []);
+
+  // Handle unauthorized event dispatched by API client on 401
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearSession();
+    };
+
+    window.addEventListener("citycare:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("citycare:unauthorized", handleUnauthorized);
+    };
+  }, [clearSession]);
 
   useEffect(() => {
     let isMounted = true;

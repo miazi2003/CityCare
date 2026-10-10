@@ -599,7 +599,7 @@ export default function AdminNotificationsPage() {
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-700">
+                <table className="min-w-[640px] w-full text-left text-sm text-slate-700">
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <tr>
                       <th className="px-5 py-3.5" scope="col">Recipient</th>
@@ -687,7 +687,7 @@ export default function AdminNotificationsPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="sla-modal-title">
               Execute SLA Breach Scan
             </h2>

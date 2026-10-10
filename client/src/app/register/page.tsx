@@ -114,11 +114,19 @@ export default function RegisterPage() {
       return;
     }
 
-    setFormError(
-      result.success
-        ? "The server returned an incomplete registration response."
-        : result.message
-    );
+    if (!result.success) {
+      if (
+        result.status === 400 &&
+        result.message.toLowerCase().includes("email already exists")
+      ) {
+        setFormError("An account with this email address already exists.");
+      } else {
+        setFormError(result.message || "Registration failed. Please try again.");
+      }
+      return;
+    }
+
+    setFormError("The server returned an incomplete registration response.");
   };
 
   return (

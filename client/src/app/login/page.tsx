@@ -88,9 +88,24 @@ export default function LoginPage() {
       return;
     }
 
-    setFormError(
-      result.success ? "The server returned an incomplete login response." : result.message
-    );
+    if (!result.success) {
+      if (result.status === 500) {
+        setFormError(
+          "Unable to sign in. Please verify your email and password, or try again later."
+        );
+      } else if (result.status === 401) {
+        setFormError(result.message || "Invalid email or password.");
+      } else if (result.status === 403) {
+        setFormError(
+          result.message || "Your account is inactive or access has been restricted."
+        );
+      } else {
+        setFormError(result.message || "Unable to sign in. Please try again.");
+      }
+      return;
+    }
+
+    setFormError("The server returned an incomplete login response.");
   };
 
   return (

@@ -473,7 +473,7 @@ export default function AdminCategoriesPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="create-cat-modal-title">
               Create New Category
             </h2>
@@ -590,7 +590,7 @@ export default function AdminCategoriesPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="edit-cat-modal-title">
               Edit Category
             </h2>
@@ -701,7 +701,7 @@ export default function AdminCategoriesPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
           role="dialog"
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
             <h2 className="text-lg font-bold text-slate-950" id="deactivate-cat-modal-title">
               Deactivate Category
             </h2>
