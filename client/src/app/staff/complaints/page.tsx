@@ -252,7 +252,7 @@ export default function StaffComplaintsPage() {
         <div className="flex shrink-0 gap-3">
           <Link
             className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50"
-            href="/staff/sla-queue"
+            href="/staff/sla"
           >
             View SLA Queue &rarr;
           </Link>

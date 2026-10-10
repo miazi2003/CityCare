@@ -22,7 +22,7 @@ const navigationByRole: Record<UserRole, NavigationItem[]> = {
   STAFF: [
     { label: "Dashboard", href: "/staff" },
     { label: "Assigned Complaints", href: "/staff/complaints" },
-    { label: "SLA Queue", href: "/staff/sla-queue" },
+    { label: "SLA Queue", href: "/staff/sla" },
     { label: "Notifications", href: "/staff/notifications" },
   ],
   ADMIN: [

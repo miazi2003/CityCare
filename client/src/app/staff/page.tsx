@@ -227,7 +227,7 @@ export default function StaffDashboardPage() {
           </Link>
           <Link
             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50"
-            href="/staff/sla-queue"
+            href="/staff/sla"
           >
             SLA Queue ({metrics.slaQueueCount})
           </Link>
@@ -287,7 +287,7 @@ export default function StaffDashboardPage() {
                 </div>
                 <Link
                   className="text-xs font-semibold text-amber-900 underline hover:text-amber-950"
-                  href="/staff/sla-queue"
+                  href="/staff/sla"
                 >
                   View full SLA queue &rarr;
                 </Link>
@@ -453,7 +453,7 @@ export default function StaffDashboardPage() {
                   </Link>
                   <Link
                     className="flex items-center justify-between rounded-lg border border-slate-200 p-3 text-xs font-semibold text-slate-800 transition hover:bg-slate-50"
-                    href="/staff/sla-queue"
+                    href="/staff/sla"
                   >
                     <span>SLA Priority Queue</span>
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
