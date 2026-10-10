@@ -9,8 +9,10 @@ import type {
   ComplaintHistory,
   ComplaintPriority,
   ComplaintStatus,
+  CreateFeedbackInput,
   Feedback,
   SLAStatus,
+  UpdateFeedbackInput,
 } from "@/types";
 
 function formatStatus(status: string): string {
@@ -101,6 +103,60 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+function InteractiveStarRating({
+  rating,
+  onChange,
+  disabled = false,
+}: {
+  rating: number;
+  onChange: (r: number) => void;
+  disabled?: boolean;
+}) {
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+
+  const displayRating = hoverRating !== null ? hoverRating : rating;
+  const ratingLabels: Record<number, string> = {
+    1: "1 - Poor",
+    2: "2 - Fair",
+    3: "3 - Good",
+    4: "4 - Very Good",
+    5: "5 - Excellent",
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div
+        className="flex items-center gap-1"
+        onMouseLeave={() => setHoverRating(null)}
+        role="group"
+        aria-label="Star rating selector"
+      >
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= displayRating;
+          return (
+            <button
+              key={star}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(star)}
+              onMouseEnter={() => setHoverRating(star)}
+              className={`p-1 text-2xl leading-none transition focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 rounded ${
+                disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:scale-110"
+              } ${isFilled ? "text-amber-400" : "text-slate-300"}`}
+              aria-label={`${star} star${star > 1 ? "s" : ""}`}
+            >
+              ★
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-xs font-medium text-slate-600">
+        {ratingLabels[displayRating] || `${displayRating} / 5`}
+      </span>
+    </div>
+  );
+}
+
 type ConfirmModalProps = {
   title: string;
   description: string;
@@ -179,11 +235,20 @@ function ComplaintDetailContent() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Mutation action state
+  // Mutation action state (Cancel / Close)
   const [activeAction, setActiveAction] = useState<"cancel" | "close" | null>(null);
   const [isActionPending, setIsActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+
+  // Feedback management state
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
+  const [isFeedbackPending, setIsFeedbackPending] = useState(false);
+  const [feedbackFormRating, setFeedbackFormRating] = useState<number>(5);
+  const [feedbackFormComment, setFeedbackFormComment] = useState<string>("");
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackSuccessMessage, setFeedbackSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -222,8 +287,12 @@ function ComplaintDetailContent() {
 
       if (feedbackResult.success && feedbackResult.data) {
         setFeedback(feedbackResult.data);
+        setFeedbackFormRating(feedbackResult.data.rating);
+        setFeedbackFormComment(feedbackResult.data.comment || "");
       } else {
         setFeedback(null);
+        setFeedbackFormRating(5);
+        setFeedbackFormComment("");
       }
 
       setIsLoading(false);
@@ -284,6 +353,127 @@ function ComplaintDetailContent() {
     }
   };
 
+  const handleStartEditFeedback = () => {
+    if (feedback) {
+      setFeedbackFormRating(feedback.rating);
+      setFeedbackFormComment(feedback.comment || "");
+    }
+    setFeedbackError(null);
+    setFeedbackSuccessMessage(null);
+    setIsEditingFeedback(true);
+  };
+
+  const handleCancelEditFeedback = () => {
+    if (feedback) {
+      setFeedbackFormRating(feedback.rating);
+      setFeedbackFormComment(feedback.comment || "");
+    }
+    setFeedbackError(null);
+    setIsEditingFeedback(false);
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complaintId || isFeedbackPending) return;
+
+    // Validation
+    if (
+      !feedbackFormRating ||
+      feedbackFormRating < 1 ||
+      feedbackFormRating > 5 ||
+      !Number.isInteger(feedbackFormRating)
+    ) {
+      setFeedbackError("Rating must be an integer between 1 and 5.");
+      return;
+    }
+
+    const trimmedComment = feedbackFormComment.trim();
+    if (trimmedComment.length > 0 && (trimmedComment.length < 3 || trimmedComment.length > 500)) {
+      setFeedbackError("Comment must be between 3 and 500 characters.");
+      return;
+    }
+
+    setIsFeedbackPending(true);
+    setFeedbackError(null);
+
+    if (feedback) {
+      // Update existing feedback
+      const payload: UpdateFeedbackInput = {
+        rating: feedbackFormRating,
+        ...(trimmedComment.length > 0 ? { comment: trimmedComment } : {}),
+      };
+
+      const result = await apiRequest<Feedback>(
+        `complaints/${encodeURIComponent(complaintId)}/feedback`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      setIsFeedbackPending(false);
+
+      if (result.success && result.data) {
+        setFeedback(result.data);
+        setIsEditingFeedback(false);
+        setFeedbackSuccessMessage(result.message || "Feedback updated successfully.");
+      } else {
+        setFeedbackError(result.message || "Failed to update feedback.");
+      }
+    } else {
+      // Create new feedback
+      const payload: CreateFeedbackInput = {
+        rating: feedbackFormRating,
+        ...(trimmedComment.length > 0 ? { comment: trimmedComment } : {}),
+      };
+
+      const result = await apiRequest<Feedback>(
+        `complaints/${encodeURIComponent(complaintId)}/feedback`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      setIsFeedbackPending(false);
+
+      if (result.success && result.data) {
+        setFeedback(result.data);
+        setIsEditingFeedback(false);
+        setFeedbackSuccessMessage(result.message || "Feedback submitted successfully.");
+      } else {
+        setFeedbackError(result.message || "Failed to submit feedback.");
+      }
+    }
+  };
+
+  const handleDeleteFeedback = async () => {
+    if (!complaintId || isFeedbackPending) return;
+
+    setIsFeedbackPending(true);
+    setFeedbackError(null);
+
+    const result = await apiRequest<null>(
+      `complaints/${encodeURIComponent(complaintId)}/feedback`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    setIsFeedbackPending(false);
+
+    if (result.success) {
+      setFeedback(null);
+      setIsDeletingFeedback(false);
+      setIsEditingFeedback(false);
+      setFeedbackFormRating(5);
+      setFeedbackFormComment("");
+      setFeedbackSuccessMessage(result.message || "Feedback deleted successfully.");
+    } else {
+      setFeedbackError(result.message || "Failed to delete feedback.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl py-6">
@@ -330,6 +520,7 @@ function ComplaintDetailContent() {
 
   const canCancel = complaint.status === "SUBMITTED" || complaint.status === "UNDER_REVIEW";
   const canClose = complaint.status === "RESOLVED";
+  const isComplaintClosed = complaint.status === "CLOSED";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -559,26 +750,157 @@ function ComplaintDetailContent() {
         )}
       </section>
 
-      {/* Citizen Feedback (Read-Only) */}
-      {feedback ? (
+      {/* Citizen Feedback Section */}
+      {isComplaintClosed || feedback ? (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-950">Citizen Feedback</h2>
               <p className="mt-0.5 text-xs text-slate-500">
-                Submitted on {formatDateTime(feedback.createdAt)}
+                {feedback
+                  ? `Submitted on ${formatDateTime(feedback.createdAt)}${
+                      feedback.updatedAt && feedback.updatedAt !== feedback.createdAt
+                        ? ` (Updated ${formatDateTime(feedback.updatedAt)})`
+                        : ""
+                    }`
+                  : "Share your experience regarding the resolution of this complaint."}
               </p>
             </div>
-            <StarRating rating={feedback.rating} />
+
+            {/* Read-only star rating badge when viewing existing feedback */}
+            {feedback && !isEditingFeedback ? (
+              <StarRating rating={feedback.rating} />
+            ) : null}
           </div>
 
-          {feedback.comment ? (
-            <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700 border border-slate-100">
-              <p className="italic">&ldquo;{feedback.comment}&rdquo;</p>
+          {/* Feedback Success banner */}
+          {feedbackSuccessMessage ? (
+            <div
+              className="mt-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+              role="status"
+            >
+              <span>{feedbackSuccessMessage}</span>
+              <button
+                className="text-xs font-semibold uppercase tracking-wider text-emerald-700 hover:text-emerald-900"
+                onClick={() => setFeedbackSuccessMessage(null)}
+                type="button"
+              >
+                Dismiss
+              </button>
             </div>
-          ) : (
-            <p className="mt-4 text-xs italic text-slate-500">No written comment provided.</p>
-          )}
+          ) : null}
+
+          {/* Feedback Error banner */}
+          {feedbackError && !isDeletingFeedback ? (
+            <div
+              className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+              role="alert"
+            >
+              {feedbackError}
+            </div>
+          ) : null}
+
+          {/* Display Mode: Existing Feedback */}
+          {feedback && !isEditingFeedback ? (
+            <div className="mt-4 space-y-4">
+              {feedback.comment ? (
+                <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="italic">&ldquo;{feedback.comment}&rdquo;</p>
+                </div>
+              ) : (
+                <p className="text-xs italic text-slate-500">No written comment provided.</p>
+              )}
+
+              {/* Action buttons (only when closed) */}
+              {isComplaintClosed ? (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <button
+                    className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isFeedbackPending}
+                    onClick={handleStartEditFeedback}
+                    type="button"
+                  >
+                    Edit Feedback
+                  </button>
+                  <button
+                    className="rounded-lg border border-red-200 bg-white px-3.5 py-2 text-xs font-medium text-red-700 shadow-xs transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={isFeedbackPending}
+                    onClick={() => {
+                      setFeedbackError(null);
+                      setIsDeletingFeedback(true);
+                    }}
+                    type="button"
+                  >
+                    Delete Feedback
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Form Mode: Create new feedback OR Edit existing feedback (only when closed) */}
+          {isComplaintClosed && (!feedback || isEditingFeedback) ? (
+            <form className="mt-6 space-y-4" onSubmit={handleSubmitFeedback}>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Rating <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-1.5">
+                  <InteractiveStarRating
+                    disabled={isFeedbackPending}
+                    onChange={setFeedbackFormRating}
+                    rating={feedbackFormRating}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="feedback-comment" className="block text-xs font-semibold text-slate-700">
+                    Comment <span className="text-slate-400 font-normal">(optional, 3–500 characters)</span>
+                  </label>
+                  <span className="text-xs text-slate-400">
+                    {feedbackFormComment.length}/500
+                  </span>
+                </div>
+                <textarea
+                  id="feedback-comment"
+                  rows={3}
+                  maxLength={500}
+                  disabled={isFeedbackPending}
+                  value={feedbackFormComment}
+                  onChange={(e) => setFeedbackFormComment(e.target.value)}
+                  placeholder="Tell us about the resolution quality, responsiveness, or municipal service..."
+                  className="mt-1.5 block w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-900 placeholder-slate-400 shadow-xs focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 disabled:cursor-not-allowed disabled:bg-slate-50"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isFeedbackPending}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isFeedbackPending
+                    ? "Saving…"
+                    : feedback
+                    ? "Save Changes"
+                    : "Submit Feedback"}
+                </button>
+
+                {isEditingFeedback ? (
+                  <button
+                    type="button"
+                    disabled={isFeedbackPending}
+                    onClick={handleCancelEditFeedback}
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
         </section>
       ) : null}
 
@@ -619,6 +941,25 @@ function ComplaintDetailContent() {
           title="Confirm Resolution & Close Complaint"
         />
       ) : null}
+
+      {/* Delete feedback confirmation modal */}
+      {isDeletingFeedback ? (
+        <ConfirmModal
+          confirmLabel="Yes, delete feedback"
+          confirmVariant="danger"
+          description="Are you sure you want to delete your feedback for this complaint? This action cannot be undone."
+          error={feedbackError}
+          isPending={isFeedbackPending}
+          onCancel={() => {
+            if (!isFeedbackPending) {
+              setIsDeletingFeedback(false);
+              setFeedbackError(null);
+            }
+          }}
+          onConfirm={handleDeleteFeedback}
+          title="Delete Feedback"
+        />
+      ) : null}
     </div>
   );
 }
@@ -636,3 +977,4 @@ export default function CitizenComplaintDetailPage() {
     </Suspense>
   );
 }
+
