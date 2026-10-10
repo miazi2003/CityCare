@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Complaint,
   ComplaintPriority,
@@ -288,27 +289,16 @@ export default function StaffSlaQueuePage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading SLA work queue…
-        </div>
+        <LoadingState message="Loading SLA work queue…" />
       ) : null}
 
       {/* Error state */}
       {error && !isLoading ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
-          role="alert"
-        >
-          <p className="font-semibold">Unable to load SLA work queue</p>
-          <p className="mt-1">{error}</p>
-          <button
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            onClick={() => setRefreshKey((k) => k + 1)}
-            type="button"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorAlert
+          message={error}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Unable to load SLA work queue"
+        />
       ) : null}
 
       {!isLoading && !error && (
@@ -445,37 +435,22 @@ export default function StaffSlaQueuePage() {
 
           {/* Empty state: No active SLA complaints */}
           {slaComplaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-950">SLA work queue is empty</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                You have no active complaints with pending SLA deadlines at this moment.
-              </p>
-              <Link
-                className="mt-6 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                href="/staff/complaints"
-              >
-                View all assigned complaints
-              </Link>
-            </div>
+            <EmptyState
+              actionHref="/staff/complaints"
+              actionLabel="View all assigned complaints"
+              description="You have no active complaints with pending SLA deadlines at this moment."
+              title="SLA work queue is empty"
+            />
           ) : null}
 
           {/* Empty state: Filter returned 0 */}
           {slaComplaints.length > 0 && filteredComplaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <p className="text-base font-medium text-slate-900">
-                No complaints in the SLA queue match your selected filters.
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Try modifying your filter selections.
-              </p>
-              <button
-                className="mt-4 inline-block rounded-md bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-                onClick={resetFilters}
-                type="button"
-              >
-                Clear all filters
-              </button>
-            </div>
+            <EmptyState
+              actionLabel="Clear all filters"
+              description="Try modifying your filter selections."
+              onAction={resetFilters}
+              title="No complaints in the SLA queue match your selected filters"
+            />
           ) : null}
 
           {/* Queue Items */}

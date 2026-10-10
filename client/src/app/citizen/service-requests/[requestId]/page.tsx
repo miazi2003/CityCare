@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 import { formatServicePrice } from "@/lib/format-service-price";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Payment,
   PaymentStatus,
@@ -73,12 +74,15 @@ function ServiceRequestDetailContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       if (!requestId) return;
+      setIsLoading(true);
+      setError(null);
 
       const [requestResult, paymentResult] = await Promise.all([
         apiRequest<ServiceRequest>(`service-requests/${encodeURIComponent(requestId)}`),
@@ -117,12 +121,12 @@ function ServiceRequestDetailContent() {
     return () => {
       isMounted = false;
     };
-  }, [requestId]);
+  }, [requestId, refreshKey]);
 
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl py-6">
-        <p className="text-slate-600">Loading service request details…</p>
+        <LoadingState message="Loading service request details…" />
       </div>
     );
   }
@@ -149,16 +153,13 @@ function ServiceRequestDetailContent() {
   if (error || !serviceRequest) {
     return (
       <div className="mx-auto max-w-4xl py-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          <p className="font-medium">Error loading service request</p>
-          <p className="mt-1">{error || "Unable to retrieve service request data."}</p>
-          <Link
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            href="/citizen/service-requests"
-          >
-            &larr; Return to my service requests
-          </Link>
-        </div>
+        <ErrorAlert
+          actionHref="/citizen/service-requests"
+          actionLabel="Back to service requests"
+          message={error || "Unable to retrieve service request data."}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Error loading service request"
+        />
       </div>
     );
   }

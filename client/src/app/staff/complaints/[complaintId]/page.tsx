@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Complaint,
   ComplaintHistory,
@@ -320,7 +321,7 @@ function StaffComplaintDetailContent() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl py-6">
-        <p className="text-slate-600">Loading complaint details…</p>
+        <LoadingState message="Loading complaint details…" />
       </div>
     );
   }
@@ -347,25 +348,13 @@ function StaffComplaintDetailContent() {
   if (error || !complaint) {
     return (
       <div className="mx-auto max-w-4xl py-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          <p className="font-medium">Error loading complaint</p>
-          <p className="mt-1">{error || "Unable to retrieve complaint data."}</p>
-          <div className="mt-4 flex gap-3">
-            <button
-              className="font-semibold text-red-800 underline hover:text-red-950"
-              onClick={() => setRefreshKey((k) => k + 1)}
-              type="button"
-            >
-              Retry
-            </button>
-            <Link
-              className="font-semibold text-red-800 underline hover:text-red-950"
-              href="/staff/complaints"
-            >
-              Return to assigned complaints
-            </Link>
-          </div>
-        </div>
+        <ErrorAlert
+          actionHref="/staff/complaints"
+          actionLabel="Return to assigned complaints"
+          message={error || "Unable to retrieve complaint data."}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Error loading complaint"
+        />
       </div>
     );
   }

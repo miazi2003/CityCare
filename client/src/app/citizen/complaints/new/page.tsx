@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import type {
   Category,
@@ -53,10 +54,15 @@ export default function NewComplaintPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdComplaint, setCreatedComplaint] = useState<Complaint | null>(null);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     let isMounted = true;
 
     async function loadOptions() {
+      setIsLoadingOptions(true);
+      setLoadError(null);
+
       const [departmentResult, categoryResult] = await Promise.all([
         apiRequest<Department[]>("departments"),
         apiRequest<Category[]>("categories"),
@@ -100,7 +106,7 @@ export default function NewComplaintPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const availableCategories = useMemo(
     () => categories.filter((category) => category.departmentId === departmentId),
@@ -258,18 +264,14 @@ export default function NewComplaintPage() {
       </div>
 
       {isLoadingOptions ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading departments and categories…
-        </div>
+        <LoadingState message="Loading departments and categories…" />
       ) : null}
 
       {loadError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-        >
-          {loadError}
-        </div>
+        <ErrorAlert
+          message={loadError}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+        />
       ) : null}
 
       {!isLoadingOptions && !loadError ? (

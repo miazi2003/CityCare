@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import type {
   Complaint,
@@ -477,7 +478,7 @@ function ComplaintDetailContent() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-4xl py-6">
-        <p className="text-slate-600">Loading complaint details…</p>
+        <LoadingState message="Loading complaint details…" />
       </div>
     );
   }
@@ -503,12 +504,14 @@ function ComplaintDetailContent() {
 
   if (error || !complaint) {
     return (
-      <div className="mx-auto max-w-4xl py-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          <p className="font-medium">Error loading complaint</p>
-          <p className="mt-1">{error || "Unable to retrieve complaint data."}</p>
+      <div className="mx-auto max-w-4xl py-6 space-y-4">
+        <ErrorAlert
+          message={error || "Unable to retrieve complaint data."}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+        />
+        <div className="text-center">
           <Link
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
+            className="text-sm font-medium text-slate-700 underline hover:text-slate-950"
             href="/citizen/complaints"
           >
             &larr; Return to my complaints

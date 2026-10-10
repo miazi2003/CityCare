@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Complaint,
   ComplaintPriority,
@@ -261,27 +262,16 @@ export default function StaffComplaintsPage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading assigned complaints…
-        </div>
+        <LoadingState message="Loading assigned complaints…" />
       ) : null}
 
       {/* Error state */}
       {error && !isLoading ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
-          role="alert"
-        >
-          <p className="font-semibold">Unable to load assigned complaints</p>
-          <p className="mt-1">{error}</p>
-          <button
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            onClick={() => setRefreshKey((k) => k + 1)}
-            type="button"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorAlert
+          message={error}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Unable to load assigned complaints"
+        />
       ) : null}
 
       {!isLoading && !error && (
@@ -405,31 +395,20 @@ export default function StaffComplaintsPage() {
 
           {/* Empty state: No complaints assigned */}
           {complaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-950">No complaints assigned</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                You currently have no municipal complaints assigned to your account.
-              </p>
-            </div>
+            <EmptyState
+              description="You currently have no municipal complaints assigned to your account."
+              title="No complaints assigned"
+            />
           ) : null}
 
           {/* Empty state: Filters yielded 0 results */}
           {complaints.length > 0 && filteredComplaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <p className="text-base font-medium text-slate-900">
-                No assigned complaints matched your filters.
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Try adjusting your search criteria or resetting filters.
-              </p>
-              <button
-                className="mt-4 inline-block rounded-md bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-                onClick={resetFilters}
-                type="button"
-              >
-                Clear all filters
-              </button>
-            </div>
+            <EmptyState
+              actionLabel="Clear all filters"
+              description="Try adjusting your search criteria or resetting filters."
+              onAction={resetFilters}
+              title="No assigned complaints match your filters"
+            />
           ) : null}
 
           {/* Complaints List Cards */}

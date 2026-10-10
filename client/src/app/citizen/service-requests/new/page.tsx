@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import { formatServicePrice } from "@/lib/format-service-price";
 import type {
@@ -29,11 +30,15 @@ export default function NewServiceRequestPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadServices() {
+      setIsLoadingServices(true);
+      setLoadError(null);
+
       const result = await apiRequest<MunicipalService[]>("services");
 
       if (!isMounted) return;
@@ -56,7 +61,7 @@ export default function NewServiceRequestPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const activeServices = useMemo(
     () => services.filter((service) => service.isActive),
@@ -184,18 +189,14 @@ export default function NewServiceRequestPage() {
       </div>
 
       {isLoadingServices ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading available municipal services…
-        </div>
+        <LoadingState message="Loading available municipal services…" />
       ) : null}
 
       {loadError ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          role="alert"
-        >
-          {loadError}
-        </div>
+        <ErrorAlert
+          message={loadError}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+        />
       ) : null}
 
       {!isLoadingServices && !loadError ? (

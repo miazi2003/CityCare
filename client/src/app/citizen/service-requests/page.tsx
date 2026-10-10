@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import { formatServicePrice } from "@/lib/format-service-price";
 import type { PaymentStatus, ServiceRequest, ServiceRequestStatus } from "@/types";
@@ -82,6 +83,7 @@ export default function CitizenServiceRequestsPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,6 +93,9 @@ export default function CitizenServiceRequestsPage() {
     let isMounted = true;
 
     async function loadServiceRequests() {
+      setIsLoading(true);
+      setError(null);
+
       const result = await apiRequest<ServiceRequest[]>("service-requests/my");
 
       if (!isMounted) return;
@@ -113,7 +118,7 @@ export default function CitizenServiceRequestsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const filteredRequests = useMemo(() => {
     return serviceRequests.filter((request) => {
@@ -177,19 +182,15 @@ export default function CitizenServiceRequestsPage() {
       </div>
 
       {/* Loading state */}
-      {isLoading ? (
-        <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading service requests…
-        </div>
-      ) : null}
+      {isLoading ? <LoadingState message="Loading service requests…" /> : null}
 
       {/* Error state */}
       {error ? (
-        <div
-          className="mt-8 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          role="alert"
-        >
-          {error}
+        <div className="mt-8">
+          <ErrorAlert
+            message={error}
+            onRetry={() => setRefreshKey((k) => k + 1)}
+          />
         </div>
       ) : null}
 

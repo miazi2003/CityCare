@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   MarkAllNotificationsReadResponse,
   Notification,
@@ -280,27 +281,16 @@ export default function CitizenNotificationsPage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading notifications…
-        </div>
+        <LoadingState message="Loading notifications…" />
       ) : null}
 
       {/* Error state */}
       {error && !isLoading ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
-          role="alert"
-        >
-          <p className="font-semibold">Unable to load notifications</p>
-          <p className="mt-1">{error}</p>
-          <button
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            onClick={() => setRefreshKey((k) => k + 1)}
-            type="button"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorAlert
+          message={error}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Unable to load notifications"
+        />
       ) : null}
 
       {!isLoading && !error && (
@@ -333,30 +323,20 @@ export default function CitizenNotificationsPage() {
 
           {/* Empty state: No notifications at all */}
           {notifications.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-950">No notifications yet</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                You will receive updates here whenever there are status changes or notices.
-              </p>
-            </div>
+            <EmptyState
+              description="You will receive updates here whenever there are status changes or notices."
+              title="No notifications yet"
+            />
           ) : null}
 
           {/* Empty state: Filter returned 0 */}
           {notifications.length > 0 && filteredNotifications.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <p className="text-base font-medium text-slate-900">
-                {filter === "UNREAD" ? "You have caught up with all notifications!" : "No notifications found."}
-              </p>
-              {filter === "UNREAD" ? (
-                <button
-                  className="mt-3 text-xs font-semibold text-sky-700 hover:text-sky-900 underline"
-                  onClick={() => setFilter("ALL")}
-                  type="button"
-                >
-                  View all notifications
-                </button>
-              ) : null}
-            </div>
+            <EmptyState
+              actionLabel={filter === "UNREAD" ? "View all notifications" : undefined}
+              description={filter === "UNREAD" ? "You have caught up with all notifications!" : "No notifications match the selected filter."}
+              onAction={filter === "UNREAD" ? () => setFilter("ALL") : undefined}
+              title="No notifications found"
+            />
           ) : null}
 
           {/* Notification List */}

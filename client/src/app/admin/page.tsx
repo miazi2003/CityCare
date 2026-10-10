@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiRequest } from "@/lib/api-client";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Complaint,
   ComplaintPriority,
@@ -215,27 +216,16 @@ export default function AdminOverviewDashboardPage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading administration overview…
-        </div>
+        <LoadingState message="Loading administration overview…" />
       ) : null}
 
       {/* Overview Load Error */}
       {errors.overview && !isLoading ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
-          role="alert"
-        >
-          <p className="font-semibold">Unable to load platform analytics</p>
-          <p className="mt-1">{errors.overview}</p>
-          <button
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            onClick={() => setRefreshKey((k) => k + 1)}
-            type="button"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorAlert
+          message={errors.overview}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Unable to load platform analytics"
+        />
       ) : null}
 
       {!isLoading && overview && (

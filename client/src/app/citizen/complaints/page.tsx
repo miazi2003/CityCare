@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import type {
   CategoryReference,
@@ -111,6 +112,8 @@ export default function CitizenComplaintsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
@@ -122,6 +125,9 @@ export default function CitizenComplaintsPage() {
     let isMounted = true;
 
     async function loadComplaints() {
+      setIsLoading(true);
+      setError(null);
+
       const result = await apiRequest<Complaint[]>("complaints/my");
 
       if (!isMounted) {
@@ -146,7 +152,7 @@ export default function CitizenComplaintsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   // Extract unique departments from complaints
   const departments = useMemo(() => {
@@ -265,13 +271,14 @@ export default function CitizenComplaintsPage() {
       </header>
 
       {/* Loading state */}
-      {isLoading ? <p className="text-slate-600">Loading your complaints…</p> : null}
+      {isLoading ? <LoadingState message="Loading your complaints…" /> : null}
 
       {/* Error state */}
       {error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
-          {error}
-        </div>
+        <ErrorAlert
+          message={error}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+        />
       ) : null}
 
       {/* Main Content */}

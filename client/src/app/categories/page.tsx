@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import { apiRequest } from "@/lib/api-client";
 import type { Category, DepartmentReference } from "@/types";
 
@@ -10,11 +11,15 @@ export default function CategoriesPage() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadCategories = async () => {
+      setIsLoading(true);
+      setError(null);
+
       const result = await apiRequest<Category[]>("categories");
 
       if (!isMounted) {
@@ -39,7 +44,7 @@ export default function CategoriesPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const departments = useMemo(
     () =>
@@ -67,8 +72,8 @@ export default function CategoriesPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <header className="flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link className="text-lg font-bold tracking-tight text-slate-950" href="/">
               City Care
@@ -85,13 +90,13 @@ export default function CategoriesPage() {
           </Link>
         </header>
 
-        {!isLoading && !error ? (
-          <div className="mb-6 max-w-sm">
+        {!isLoading && !error && categories.length > 0 ? (
+          <div className="max-w-sm">
             <label className="mb-2 block text-sm font-medium text-slate-800" htmlFor="department-filter">
               Filter by department
             </label>
             <select
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-hidden focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
               id="department-filter"
               onChange={handleDepartmentChange}
               value={selectedDepartmentId}
@@ -106,24 +111,42 @@ export default function CategoriesPage() {
           </div>
         ) : null}
 
-        {isLoading ? <p className="text-slate-600">Loading categories…</p> : null}
+        {isLoading ? <LoadingState message="Loading categories…" /> : null}
 
         {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-            {error}
-          </p>
+          <ErrorAlert
+            message={error}
+            onRetry={() => setRefreshKey((k) => k + 1)}
+          />
         ) : null}
 
-        {!isLoading && !error && filteredCategories.length === 0 ? (
-          <p className="rounded-md border border-slate-200 bg-white px-4 py-8 text-center text-slate-600">
-            No active categories match this department.
-          </p>
+        {!isLoading && !error && categories.length === 0 ? (
+          <EmptyState
+            description="No complaint categories are currently available."
+            title="No categories available"
+          />
+        ) : null}
+
+        {!isLoading && !error && categories.length > 0 && filteredCategories.length === 0 ? (
+          <EmptyState
+            action={
+              <button
+                className="text-sm font-medium text-slate-900 underline hover:text-slate-700"
+                onClick={() => setSelectedDepartmentId("")}
+                type="button"
+              >
+                Clear filter
+              </button>
+            }
+            description="No categories match the selected department."
+            title="No matching categories"
+          />
         ) : null}
 
         {!isLoading && !error && filteredCategories.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredCategories.map((category) => (
-              <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={category.id}>
+              <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs" key={category.id}>
                 <p className="text-sm font-medium text-slate-500">{category.department.name}</p>
                 <h2 className="mt-1 text-lg font-semibold text-slate-950">{category.name}</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">

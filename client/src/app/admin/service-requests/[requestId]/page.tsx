@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 import { formatServicePrice } from "@/lib/format-service-price";
+import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Payment,
   PaymentStatus,
@@ -176,16 +177,13 @@ function ServiceRequestDetailContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-slate-900 border-r-transparent align-[-0.125em]" />
-          <p className="mt-3 text-sm text-slate-600">Loading service request details…</p>
-        </div>
+      <div className="py-8">
+        <LoadingState message="Loading service request details…" />
       </div>
     );
   }
 
-  if (isNotFound || !serviceRequest) {
+  if (isNotFound) {
     return (
       <div className="mx-auto max-w-xl py-12 text-center">
         <h2 className="text-2xl font-bold tracking-tight text-slate-950">
@@ -198,8 +196,22 @@ function ServiceRequestDetailContent() {
           className="mt-6 inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition"
           href="/admin/service-requests"
         >
-          ← Back to Service Requests
+          &larr; Back to Service Requests
         </Link>
+      </div>
+    );
+  }
+
+  if (error || !serviceRequest) {
+    return (
+      <div className="py-6">
+        <ErrorAlert
+          actionHref="/admin/service-requests"
+          actionLabel="Back to Service Requests"
+          message={error || "Unable to retrieve service request details."}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Error loading service request"
+        />
       </div>
     );
   }

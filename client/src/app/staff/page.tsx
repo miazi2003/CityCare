@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { apiRequest } from "@/lib/api-client";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type { Complaint, ComplaintPriority, ComplaintStatus, Notification, SLAStatus } from "@/types";
 
 type StaffDashboardErrors = {
@@ -236,9 +237,7 @@ export default function StaffDashboardPage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading staff dashboard…
-        </div>
+        <LoadingState message="Loading staff dashboard…" />
       ) : null}
 
       {!isLoading && (
@@ -354,29 +353,20 @@ export default function StaffDashboardPage() {
               </div>
 
               {errors.assignedComplaints ? (
-                <div
-                  className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-xs text-red-700"
-                  role="alert"
-                >
-                  <p className="font-semibold">Error loading assigned complaints</p>
-                  <p className="mt-1">{errors.assignedComplaints}</p>
-                  <button
-                    className="mt-2 text-xs font-semibold text-red-800 underline"
-                    onClick={() => setRefreshKey((k) => k + 1)}
-                    type="button"
-                  >
-                    Retry
-                  </button>
+                <div className="mt-4">
+                  <ErrorAlert
+                    message={errors.assignedComplaints}
+                    onRetry={() => setRefreshKey((k) => k + 1)}
+                    title="Error loading assigned complaints"
+                  />
                 </div>
               ) : null}
 
               {!errors.assignedComplaints && recentAssigned.length === 0 ? (
-                <div className="py-12 text-center text-slate-500">
-                  <p className="text-sm font-medium">No complaints currently assigned</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    When administrators assign complaints to you, they will appear here.
-                  </p>
-                </div>
+                <EmptyState
+                  description="When administrators assign complaints to you, they will appear here."
+                  title="No complaints currently assigned"
+                />
               ) : null}
 
               {!errors.assignedComplaints && recentAssigned.length > 0 ? (

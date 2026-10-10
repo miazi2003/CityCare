@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { apiRequest } from "@/lib/api-client";
+import { EmptyState, ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Complaint,
   ComplaintPriority,
@@ -291,27 +292,16 @@ export default function AdminComplaintsPage() {
 
       {/* Loading state */}
       {isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">
-          Loading complaints list…
-        </div>
+        <LoadingState message="Loading complaints list…" />
       ) : null}
 
       {/* Error state */}
       {error && !isLoading ? (
-        <div
-          className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
-          role="alert"
-        >
-          <p className="font-semibold">Unable to load complaints</p>
-          <p className="mt-1">{error}</p>
-          <button
-            className="mt-4 inline-block font-semibold text-red-800 underline hover:text-red-950"
-            onClick={() => setRefreshKey((k) => k + 1)}
-            type="button"
-          >
-            Try again
-          </button>
-        </div>
+        <ErrorAlert
+          message={error}
+          onRetry={() => setRefreshKey((k) => k + 1)}
+          title="Unable to load complaints"
+        />
       ) : null}
 
       {!isLoading && !error && (
@@ -456,31 +446,20 @@ export default function AdminComplaintsPage() {
 
           {/* Empty state: No complaints found */}
           {complaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-950">No complaints registered</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                There are currently no complaints submitted on the platform.
-              </p>
-            </div>
+            <EmptyState
+              description="There are currently no complaints submitted on the platform."
+              title="No complaints registered"
+            />
           ) : null}
 
           {/* Filtered empty state */}
           {complaints.length > 0 && filteredComplaints.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-              <p className="text-base font-medium text-slate-900">
-                No complaints matched your selected filters.
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Try modifying your search criteria or resetting filters.
-              </p>
-              <button
-                className="mt-4 inline-block rounded-md bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-                onClick={resetFilters}
-                type="button"
-              >
-                Clear all filters
-              </button>
-            </div>
+            <EmptyState
+              actionLabel="Clear all filters"
+              description="Try modifying your search criteria or resetting filters."
+              onAction={resetFilters}
+              title="No complaints match your selected filters"
+            />
           ) : null}
 
           {/* Complaints List Cards */}
