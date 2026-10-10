@@ -204,7 +204,7 @@ export const apiRequest = async <T>(
         ...requestOptions,
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
       }
     );
   } catch {

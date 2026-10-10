@@ -79,24 +79,18 @@ export const createPaymentSessionForServiceRequestIntoDB = async (
           quantity: 1,
         },
       ],
-      success_url: `http://localhost:5000/api/v1/payments/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:5000/api/v1/payments/cancel`,
+      success_url: `${config.client_url}/citizen/service-requests/${serviceRequest.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${config.client_url}/citizen/service-requests/${serviceRequest.id}?payment=cancelled`,
     });
+
+    if (!session.url && !session.id) {
+      throw new Error("Failed to create Stripe Checkout session");
+    }
 
     checkoutUrl = session.url || `https://checkout.stripe.com/c/pay/${session.id}`;
     sessionId = session.id;
   } catch (stripeError: any) {
-    if (
-      config.stripe_secret_key.includes("Mock") ||
-      config.stripe_secret_key.includes("placeholder") ||
-      stripeError.type === "StripeAuthenticationError" ||
-      stripeError.message?.includes("Invalid API Key")
-    ) {
-      sessionId = `cs_test_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      checkoutUrl = `https://checkout.stripe.com/c/pay/${sessionId}`;
-    } else {
-      throw stripeError;
-    }
+    throw new Error(stripeError.message || "Failed to create payment checkout session");
   }
 
   // Store Stripe session id in transactionId
@@ -168,6 +162,15 @@ export const processStripeWebhookFromDB = async (
     event.type === "payment_intent.succeeded"
   ) {
     const sessionOrIntent = event.data.object as any;
+
+    // For checkout session, only process if payment_status is paid
+    if (
+      event.type === "checkout.session.completed" &&
+      sessionOrIntent.payment_status !== "paid"
+    ) {
+      return { received: true, ignored: "Payment not completed" };
+    }
+
     const serviceRequestId =
       sessionOrIntent.metadata?.serviceRequestId ||
       sessionOrIntent.client_reference_id;
@@ -179,15 +182,37 @@ export const processStripeWebhookFromDB = async (
       let notifiedCitizenId: string | null = null;
 
       await prisma.$transaction(async (tx) => {
-        const payment = await tx.payment.findUnique({
-          where: { serviceRequestId },
-        });
-
         const serviceRequest = await tx.serviceRequest.findUnique({
           where: { id: serviceRequestId },
         });
 
-        if (!serviceRequest) return;
+        if (!serviceRequest) {
+          throw new Error(`Service request ${serviceRequestId} not found during webhook reconciliation`);
+        }
+
+        // Amount & Currency Reconciliation
+        const sessionAmountTotal =
+          sessionOrIntent.amount_total ||
+          sessionOrIntent.amount_received ||
+          sessionOrIntent.amount;
+        const expectedAmountInCents = Math.round(Number(serviceRequest.amount) * 100);
+
+        if (sessionAmountTotal && sessionAmountTotal !== expectedAmountInCents) {
+          throw new Error(
+            `Payment reconciliation failed: amount mismatch. Expected ${expectedAmountInCents} cents, received ${sessionAmountTotal} cents`
+          );
+        }
+
+        const sessionCurrency = sessionOrIntent.currency?.toLowerCase();
+        if (sessionCurrency && sessionCurrency !== "usd") {
+          throw new Error(
+            `Payment reconciliation failed: currency mismatch. Expected usd, received ${sessionCurrency}`
+          );
+        }
+
+        const payment = await tx.payment.findUnique({
+          where: { serviceRequestId },
+        });
 
         // Idempotency: if already PAID, do not re-process or duplicate
         if (

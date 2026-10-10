@@ -288,7 +288,7 @@ function AdminComplaintDetailContent() {
 
     const result = await apiRequest<Complaint>(`complaints/${encodeURIComponent(complaintId)}/review`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: payload,
     });
 
     setIsActionPending(false);
@@ -315,7 +315,7 @@ function AdminComplaintDetailContent() {
 
     const result = await apiRequest<Complaint>(`complaints/${encodeURIComponent(complaintId)}/review`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: payload,
     });
 
     setIsActionPending(false);
@@ -342,7 +342,7 @@ function AdminComplaintDetailContent() {
 
     const result = await apiRequest<Complaint>(`complaints/${encodeURIComponent(complaintId)}/assign`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: payload,
     });
 
     setIsActionPending(false);

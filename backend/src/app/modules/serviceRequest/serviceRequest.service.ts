@@ -1,5 +1,5 @@
 import prisma from "../../lib/prisma";
-import { ServiceRequestStatus } from "@prisma/client";
+import { Prisma, ServiceRequestStatus } from "@prisma/client";
 import { createAuditLog } from "../auditLog/auditLog.service";
 
 export interface ICreateServiceRequestPayload {
@@ -26,14 +26,17 @@ export const createServiceRequestIntoDB = async (
     throw new Error("Municipal service is inactive");
   }
 
+  const validQuantity = typeof payload.quantity === "number" && payload.quantity > 0 ? payload.quantity : 1;
+  const totalAmount = new Prisma.Decimal(service.price).mul(validQuantity);
+
   const serviceRequest = await prisma.serviceRequest.create({
     data: {
       serviceId: service.id,
       citizenId,
       location: payload.location,
-      quantity: payload.quantity,
+      quantity: validQuantity,
       notes: payload.notes,
-      amount: service.price,
+      amount: totalAmount,
       status: "PENDING_PAYMENT",
     },
     include: {

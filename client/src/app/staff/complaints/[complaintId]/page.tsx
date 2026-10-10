@@ -265,7 +265,7 @@ function StaffComplaintDetailContent() {
       `complaints/${encodeURIComponent(complaintId)}/status`,
       {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: payload,
       }
     );
 
@@ -302,7 +302,7 @@ function StaffComplaintDetailContent() {
       `complaints/${encodeURIComponent(complaintId)}/resolve`,
       {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: payload,
       }
     );
 

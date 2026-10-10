@@ -368,7 +368,18 @@ export default function CitizenServiceRequestsPage() {
                     </p>
                   ) : null}
 
-                  <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    {request.status === "PENDING_PAYMENT" ? (
+                      <Link
+                        className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-emerald-700"
+                        href={`/citizen/service-requests/${request.id}`}
+                      >
+                        Pay Now (${formatServicePrice(request.amount)}) &rarr;
+                      </Link>
+                    ) : (
+                      <span />
+                    )}
+
                     <Link
                       className="text-xs font-semibold text-sky-700 hover:text-sky-900 hover:underline"
                       href={`/citizen/service-requests/${request.id}`}

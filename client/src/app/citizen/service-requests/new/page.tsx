@@ -147,7 +147,7 @@ export default function NewServiceRequestPage() {
 
     const result = await apiRequest<ServiceRequest>("service-requests", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     });
 
     setIsSubmitting(false);

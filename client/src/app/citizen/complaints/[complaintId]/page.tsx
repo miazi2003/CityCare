@@ -408,7 +408,7 @@ function ComplaintDetailContent() {
         `complaints/${encodeURIComponent(complaintId)}/feedback`,
         {
           method: "PATCH",
-          body: JSON.stringify(payload),
+          body: payload,
         }
       );
 
@@ -432,7 +432,7 @@ function ComplaintDetailContent() {
         `complaints/${encodeURIComponent(complaintId)}/feedback`,
         {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: payload,
         }
       );
 

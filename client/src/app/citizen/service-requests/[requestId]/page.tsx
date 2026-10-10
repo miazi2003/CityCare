@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 import { formatServicePrice } from "@/lib/format-service-price";
 import { ErrorAlert, LoadingState } from "@/components/ui/state-views";
 import type {
   Payment,
+  PaymentSession,
   PaymentStatus,
   ServiceRequest,
   ServiceRequestStatus,
@@ -68,6 +69,9 @@ function getPaymentStatusBadgeClasses(status: PaymentStatus): string {
 
 function ServiceRequestDetailContent() {
   const { requestId } = useParams<{ requestId: string }>();
+  const searchParams = useSearchParams();
+  const paymentParam = searchParams.get("payment");
+
   const [serviceRequest, setServiceRequest] = useState<ServiceRequest | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
 
@@ -75,6 +79,10 @@ function ServiceRequestDetailContent() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Pay Now submission state
+  const [isPaying, setIsPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -122,6 +130,28 @@ function ServiceRequestDetailContent() {
       isMounted = false;
     };
   }, [requestId, refreshKey]);
+
+  const isEligibleForPayment = serviceRequest?.status === "PENDING_PAYMENT";
+
+  const handlePayNow = async () => {
+    if (!requestId || !isEligibleForPayment || isPaying) return;
+    setIsPaying(true);
+    setPayError(null);
+
+    const result = await apiRequest<PaymentSession>(
+      `service-requests/${encodeURIComponent(requestId)}/payment`,
+      { method: "POST" }
+    );
+
+    if (result.success && result.data?.checkoutUrl) {
+      window.location.href = result.data.checkoutUrl;
+    } else {
+      setIsPaying(false);
+      setPayError(
+        result.message || "Failed to initiate payment checkout session. Please try again."
+      );
+    }
+  };
 
   if (isLoading) {
     return (
@@ -176,6 +206,48 @@ function ServiceRequestDetailContent() {
         </Link>
       </div>
 
+      {/* Payment Feedback Banners (from Stripe Return) */}
+      {paymentParam === "success" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 shadow-xs">
+          <div className="flex items-start gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+              ✓
+            </span>
+            <div className="space-y-1">
+              <p className="font-semibold text-emerald-950">Payment Submitted Successfully</p>
+              <p className="text-xs text-emerald-800">
+                Your payment was received. The system is reconciling the transaction with Stripe.
+                Your service request and payment status will update automatically once confirmed by the server.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {paymentParam === "cancelled" ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
+          <div className="flex items-start gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white">
+              !
+            </span>
+            <div className="space-y-1">
+              <p className="font-semibold text-amber-950">Payment Checkout Cancelled</p>
+              <p className="text-xs text-amber-800">
+                The Stripe payment session was cancelled. No charges were made. You may review the details and proceed with payment when ready.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Payment error if Pay Now action failed */}
+      {payError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 shadow-xs">
+          <p className="font-semibold text-rose-950">Payment Initiation Failed</p>
+          <p className="mt-1 text-xs text-rose-800">{payError}</p>
+        </div>
+      ) : null}
+
       {/* Service Request Overview */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -208,11 +280,23 @@ function ServiceRequestDetailContent() {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-baseline gap-1 text-right sm:flex-col sm:items-end">
+          <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
             <span className="text-xs font-medium text-slate-500">Total Billed Amount:</span>
-            <span className="text-xl font-bold text-slate-950 sm:text-2xl">
+            <span className="text-2xl font-bold text-slate-950">
               ${formatServicePrice(serviceRequest.amount)}
             </span>
+
+            {/* Pay Now Button in Top Header if pending payment */}
+            {isEligibleForPayment ? (
+              <button
+                className="mt-2 inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isPaying}
+                onClick={handlePayNow}
+                type="button"
+              >
+                {isPaying ? "Redirecting to Stripe…" : `Pay Now ($${formatServicePrice(serviceRequest.amount)})`}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -316,10 +400,25 @@ function ServiceRequestDetailContent() {
           </dl>
         ) : (
           <div className="mt-6 rounded-lg border border-slate-100 bg-slate-50 p-6 text-center">
-            <p className="text-sm font-medium text-slate-700">No payment record found</p>
+            <p className="text-sm font-medium text-slate-700">No finalized payment record</p>
             <p className="mt-1 text-xs text-slate-500">
-              There is currently no processed transaction or payment session recorded for this service request.
+              {isEligibleForPayment
+                ? "This service request is currently pending payment. Click the Pay Now button to complete payment with Stripe."
+                : "There is currently no payment session recorded for this service request."}
             </p>
+
+            {isEligibleForPayment ? (
+              <div className="mt-4">
+                <button
+                  className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isPaying}
+                  onClick={handlePayNow}
+                  type="button"
+                >
+                  {isPaying ? "Redirecting to Stripe…" : `Pay Now ($${formatServicePrice(serviceRequest.amount)})`}
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </section>
