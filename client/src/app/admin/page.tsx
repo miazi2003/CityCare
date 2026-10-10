@@ -317,7 +317,7 @@ export default function AdminOverviewDashboardPage() {
                     </div>
 
                     <h3 className="mt-2 text-sm font-bold text-slate-950 hover:underline">
-                      <Link href="/admin/complaints">{complaint.title}</Link>
+                      <Link href={`/admin/complaints/${complaint.id}`}>{complaint.title}</Link>
                     </h3>
 
                     <div className="mt-3 flex flex-col gap-1 text-xs text-slate-500 border-t border-slate-100 pt-2">
