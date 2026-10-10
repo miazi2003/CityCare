@@ -20,7 +20,18 @@ type ParsedResponseBody =
   | { type: "json"; value: unknown }
   | { type: "non-json"; text: string };
 
-const getBackendUrl = () => process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, "");
+const getBackendUrl = (): string | null => {
+  const rawUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+  if (!rawUrl) {
+    return null;
+  }
+  try {
+    const parsed = new URL(rawUrl);
+    return parsed.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -165,7 +176,7 @@ export const apiRequest = async <T>(
   if (!backendUrl) {
     return clientError(
       null,
-      "NEXT_PUBLIC_BACKEND_URL is not configured.",
+      "Application configuration error: NEXT_PUBLIC_BACKEND_URL is not configured or is invalid.",
       "config"
     );
   }
