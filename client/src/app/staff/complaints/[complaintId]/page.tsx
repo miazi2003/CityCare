@@ -10,7 +10,9 @@ import type {
   ComplaintPriority,
   ComplaintStatus,
   Feedback,
+  ResolveComplaintInput,
   SLAStatus,
+  UpdateComplaintStatusInput,
 } from "@/types";
 
 function formatStatus(status: string): string {
@@ -102,6 +104,79 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+type ConfirmModalProps = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  confirmVariant?: "primary" | "success" | "danger";
+  isPending: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+  children?: React.ReactNode;
+};
+
+function ConfirmModal({
+  title,
+  description,
+  confirmLabel,
+  confirmVariant = "primary",
+  isPending,
+  error,
+  onConfirm,
+  onCancel,
+  children,
+}: ConfirmModalProps) {
+  return (
+    <div
+      aria-labelledby="modal-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+      role="dialog"
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+        <h3 className="text-lg font-bold text-slate-950" id="modal-title">
+          {title}
+        </h3>
+        <p className="mt-2 text-sm text-slate-600">{description}</p>
+
+        {children}
+
+        {error ? (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isPending}
+            onClick={onCancel}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              confirmVariant === "success"
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : confirmVariant === "danger"
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
+            disabled={isPending}
+            onClick={onConfirm}
+            type="button"
+          >
+            {isPending ? "Processing…" : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StaffComplaintDetailContent() {
   const { complaintId } = useParams<{ complaintId: string }>();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
@@ -112,6 +187,16 @@ function StaffComplaintDetailContent() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Workflow mutation states
+  const [activeModal, setActiveModal] = useState<"start_work" | "resolve" | null>(null);
+  const [isActionPending, setIsActionPending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+
+  // Resolve note form state
+  const [resolveNote, setResolveNote] = useState("");
+  const [resolveNoteFieldError, setResolveNoteFieldError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -163,6 +248,74 @@ function StaffComplaintDetailContent() {
       isMounted = false;
     };
   }, [complaintId, refreshKey]);
+
+  // Start Work (ASSIGNED -> IN_PROGRESS)
+  const handleStartWork = async () => {
+    if (!complaintId || isActionPending) return;
+
+    setIsActionPending(true);
+    setActionError(null);
+
+    const payload: UpdateComplaintStatusInput = {
+      status: "IN_PROGRESS",
+    };
+
+    const result = await apiRequest<Complaint>(
+      `complaints/${encodeURIComponent(complaintId)}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    setIsActionPending(false);
+
+    if (result.success) {
+      setActionSuccessMessage(result.message || "Complaint status updated to In Progress.");
+      setActiveModal(null);
+      setRefreshKey((k) => k + 1);
+    } else {
+      setActionError(result.message || "Failed to update complaint status to In Progress.");
+    }
+  };
+
+  // Resolve Complaint (IN_PROGRESS -> RESOLVED)
+  const handleResolveComplaint = async () => {
+    if (!complaintId || isActionPending) return;
+
+    const trimmedNote = resolveNote.trim();
+    if (!trimmedNote || trimmedNote.length < 5 || trimmedNote.length > 500) {
+      setResolveNoteFieldError("Resolution note must be between 5 and 500 characters.");
+      return;
+    }
+
+    setResolveNoteFieldError(null);
+    setIsActionPending(true);
+    setActionError(null);
+
+    const payload: ResolveComplaintInput = {
+      note: trimmedNote,
+    };
+
+    const result = await apiRequest<Complaint>(
+      `complaints/${encodeURIComponent(complaintId)}/resolve`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    setIsActionPending(false);
+
+    if (result.success) {
+      setActionSuccessMessage(result.message || "Complaint resolved successfully.");
+      setActiveModal(null);
+      setResolveNote("");
+      setRefreshKey((k) => k + 1);
+    } else {
+      setActionError(result.message || "Failed to resolve complaint.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -217,6 +370,9 @@ function StaffComplaintDetailContent() {
     );
   }
 
+  const canStartWork = complaint.status === "ASSIGNED";
+  const canResolve = complaint.status === "IN_PROGRESS";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Top back navigation */}
@@ -228,6 +384,23 @@ function StaffComplaintDetailContent() {
           &larr; Back to assigned complaints
         </Link>
       </div>
+
+      {/* Action success alert banner */}
+      {actionSuccessMessage ? (
+        <div
+          className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          role="status"
+        >
+          <span>{actionSuccessMessage}</span>
+          <button
+            className="text-xs font-semibold uppercase tracking-wider text-emerald-700 hover:text-emerald-900"
+            onClick={() => setActionSuccessMessage(null)}
+            type="button"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       {/* Complaint Overview Header */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -263,6 +436,38 @@ function StaffComplaintDetailContent() {
               {complaint.title}
             </h1>
             <p className="mt-1 font-mono text-xs text-slate-400">Reference ID: {complaint.id}</p>
+          </div>
+
+          {/* Action buttons for staff workflow */}
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {canStartWork ? (
+              <button
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isActionPending}
+                onClick={() => {
+                  setActionError(null);
+                  setActiveModal("start_work");
+                }}
+                type="button"
+              >
+                Start Work
+              </button>
+            ) : null}
+
+            {canResolve ? (
+              <button
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isActionPending}
+                onClick={() => {
+                  setActionError(null);
+                  setResolveNoteFieldError(null);
+                  setActiveModal("resolve");
+                }}
+                type="button"
+              >
+                Resolve Complaint
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -431,6 +636,74 @@ function StaffComplaintDetailContent() {
           )}
         </section>
       ) : null}
+
+      {/* Start Work Confirmation Modal */}
+      {activeModal === "start_work" ? (
+        <ConfirmModal
+          confirmLabel="Yes, start work"
+          confirmVariant="primary"
+          description="Are you ready to begin work on this complaint? This will transition the status to In Progress and notify relevant stakeholders."
+          error={actionError}
+          isPending={isActionPending}
+          onCancel={() => {
+            if (!isActionPending) {
+              setActiveModal(null);
+              setActionError(null);
+            }
+          }}
+          onConfirm={handleStartWork}
+          title="Start Work on Complaint"
+        />
+      ) : null}
+
+      {/* Resolve Complaint Modal */}
+      {activeModal === "resolve" ? (
+        <ConfirmModal
+          confirmLabel="Confirm Resolution"
+          confirmVariant="success"
+          description="Please describe how this complaint was resolved. This note will be recorded in the status timeline and made available to the citizen."
+          error={actionError}
+          isPending={isActionPending}
+          onCancel={() => {
+            if (!isActionPending) {
+              setActiveModal(null);
+              setActionError(null);
+              setResolveNoteFieldError(null);
+            }
+          }}
+          onConfirm={handleResolveComplaint}
+          title="Resolve Complaint"
+        >
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700" htmlFor="resolution-note">
+                Resolution Note <span className="text-red-500">*</span>
+              </label>
+              <span className="text-xs text-slate-400">{resolveNote.length}/500</span>
+            </div>
+            <textarea
+              className="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900 disabled:cursor-not-allowed disabled:bg-slate-50"
+              disabled={isActionPending}
+              id="resolution-note"
+              maxLength={500}
+              onChange={(e) => {
+                setResolveNote(e.target.value);
+                if (resolveNoteFieldError) {
+                  setResolveNoteFieldError(null);
+                }
+              }}
+              placeholder="Detail the actions taken, repairs completed, or findings..."
+              rows={4}
+              value={resolveNote}
+            />
+            {resolveNoteFieldError ? (
+              <p className="text-xs text-red-600">{resolveNoteFieldError}</p>
+            ) : (
+              <p className="text-xs text-slate-500">Provide a clear note (5–500 characters).</p>
+            )}
+          </div>
+        </ConfirmModal>
+      ) : null}
     </div>
   );
 }
@@ -448,4 +721,5 @@ export default function StaffComplaintDetailPage() {
     </Suspense>
   );
 }
+
 
