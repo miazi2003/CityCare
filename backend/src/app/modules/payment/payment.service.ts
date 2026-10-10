@@ -1,10 +1,10 @@
+import type Stripe from "stripe";
 import prisma from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { config } from "../../config";
 import { createNotification } from "../notification/notification.service";
 import { createAuditLog } from "../auditLog/auditLog.service";
 
-// 1. Citizen creates Stripe payment session for a service request
 export const createPaymentSessionForServiceRequestIntoDB = async (
   serviceRequestId: string,
   citizenId: string
@@ -29,7 +29,6 @@ export const createPaymentSessionForServiceRequestIntoDB = async (
     throw new Error("Service request is not pending payment");
   }
 
-  // Create or reuse the Payment record in PENDING status
   const payment = await prisma.payment.upsert({
     where: { serviceRequestId: serviceRequest.id },
     update: {
@@ -48,14 +47,12 @@ export const createPaymentSessionForServiceRequestIntoDB = async (
     },
   });
 
-  // Convert amount to cents for Stripe
   const unitAmountInCents = Math.round(Number(serviceRequest.amount) * 100);
 
   let checkoutUrl: string;
   let sessionId: string;
 
   try {
-    // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -93,7 +90,6 @@ export const createPaymentSessionForServiceRequestIntoDB = async (
     throw new Error(stripeError.message || "Failed to create payment checkout session");
   }
 
-  // Store Stripe session id in transactionId
   await prisma.payment.update({
     where: { id: payment.id },
     data: {
@@ -107,7 +103,6 @@ export const createPaymentSessionForServiceRequestIntoDB = async (
   };
 };
 
-// 2. View payment status for a service request (CITIZEN own, ADMIN any)
 export const getPaymentStatusByServiceRequestFromDB = async (
   serviceRequestId: string,
   user: { id: string; role: string }
@@ -142,7 +137,6 @@ export const getPaymentStatusByServiceRequestFromDB = async (
   };
 };
 
-// 3. Process Stripe Webhook with signature verification & idempotency
 export const processStripeWebhookFromDB = async (
   rawBody: Buffer | string,
   signature: string | undefined
@@ -161,9 +155,8 @@ export const processStripeWebhookFromDB = async (
     event.type === "checkout.session.completed" ||
     event.type === "payment_intent.succeeded"
   ) {
-    const sessionOrIntent = event.data.object as any;
+    const sessionOrIntent = event.data.object as (Stripe.Checkout.Session | Stripe.PaymentIntent) & Record<string, any>;
 
-    // For checkout session, only process if payment_status is paid
     if (
       event.type === "checkout.session.completed" &&
       sessionOrIntent.payment_status !== "paid"
@@ -173,9 +166,9 @@ export const processStripeWebhookFromDB = async (
 
     const serviceRequestId =
       sessionOrIntent.metadata?.serviceRequestId ||
-      sessionOrIntent.client_reference_id;
+      (sessionOrIntent as Stripe.Checkout.Session).client_reference_id;
     const transactionId =
-      sessionOrIntent.payment_intent ||
+      (sessionOrIntent as any).payment_intent ||
       sessionOrIntent.id;
 
     if (serviceRequestId) {
@@ -190,11 +183,10 @@ export const processStripeWebhookFromDB = async (
           throw new Error(`Service request ${serviceRequestId} not found during webhook reconciliation`);
         }
 
-        // Amount & Currency Reconciliation
         const sessionAmountTotal =
           sessionOrIntent.amount_total ||
-          sessionOrIntent.amount_received ||
-          sessionOrIntent.amount;
+          (sessionOrIntent as Stripe.PaymentIntent).amount_received ||
+          (sessionOrIntent as Stripe.PaymentIntent).amount;
         const expectedAmountInCents = Math.round(Number(serviceRequest.amount) * 100);
 
         if (sessionAmountTotal && sessionAmountTotal !== expectedAmountInCents) {
@@ -214,7 +206,6 @@ export const processStripeWebhookFromDB = async (
           where: { serviceRequestId },
         });
 
-        // Idempotency: if already PAID, do not re-process or duplicate
         if (
           payment &&
           payment.status === "PAID" &&
@@ -266,7 +257,6 @@ export const processStripeWebhookFromDB = async (
           type: "PAYMENT_SUCCESS",
         });
 
-        // Audit log verified payment (never store card numbers, CVC, or secrets)
         await createAuditLog({
           userId: notifiedCitizenId,
           action: "PAYMENT",

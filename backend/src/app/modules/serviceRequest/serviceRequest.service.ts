@@ -1,5 +1,5 @@
 import prisma from "../../lib/prisma";
-import { Prisma, ServiceRequestStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { createAuditLog } from "../auditLog/auditLog.service";
 
 export interface ICreateServiceRequestPayload {
@@ -9,7 +9,6 @@ export interface ICreateServiceRequestPayload {
   notes?: string;
 }
 
-// 1. Citizen creates a service request
 export const createServiceRequestIntoDB = async (
   citizenId: string,
   payload: ICreateServiceRequestPayload
