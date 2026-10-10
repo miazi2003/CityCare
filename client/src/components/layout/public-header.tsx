@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { getRoleHomeRoute } from "@/lib/auth-routes";
+import { CityCareLogo } from "@/components/ui/city-care-logo";
 
 type NavLink = {
   label: string;
@@ -35,22 +36,12 @@ function PublicHeaderContent() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md transition-colors">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-        {/* Brand Logo */}
+        {/* Brand Logo with City Map Icon */}
         <Link
-          className="flex items-center gap-2.5 text-slate-950 transition-opacity hover:opacity-90"
+          className="transition-opacity hover:opacity-90"
           href="/"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white shadow-xs ring-1 ring-slate-900/10">
-            CC
-          </span>
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-slate-950 leading-tight">
-              City Care
-            </span>
-            <span className="text-[11px] font-medium text-slate-500 leading-tight">
-              Municipal Services &amp; Civic Portal
-            </span>
-          </div>
+          <CityCareLogo showTagline={true} />
         </Link>
 
         {/* Desktop Navigation Links */}

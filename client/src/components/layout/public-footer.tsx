@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CityCareLogo } from "@/components/ui/city-care-logo";
 
 export function PublicFooter() {
   return (
@@ -7,13 +8,8 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand & Mission */}
           <div className="space-y-4">
-            <Link className="flex items-center gap-2.5 text-white" href="/">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-sm font-bold text-slate-950">
-                CC
-              </span>
-              <span className="text-base font-bold tracking-tight text-white">
-                City Care
-              </span>
+            <Link className="inline-block transition-opacity hover:opacity-90" href="/">
+              <CityCareLogo showTagline={true} variant="dark" />
             </Link>
             <p className="text-sm leading-relaxed text-slate-400">
               The municipal service and civic issue tracking platform connecting residents with city operational teams and administrators.
