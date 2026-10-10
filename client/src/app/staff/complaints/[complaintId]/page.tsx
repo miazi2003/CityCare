@@ -1,0 +1,451 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api-client";
+import type {
+  Complaint,
+  ComplaintHistory,
+  ComplaintPriority,
+  ComplaintStatus,
+  Feedback,
+  SLAStatus,
+} from "@/types";
+
+function formatStatus(status: string): string {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  return Number.isNaN(date.getTime())
+    ? dateStr
+    : date.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
+function getStatusBadgeClasses(status: ComplaintStatus): string {
+  switch (status) {
+    case "RESOLVED":
+    case "CLOSED":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "IN_PROGRESS":
+      return "bg-indigo-50 text-indigo-700 border-indigo-200";
+    case "ASSIGNED":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "SUBMITTED":
+    case "REOPENED":
+    case "UNDER_REVIEW":
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    case "REJECTED":
+    case "CANCELLED":
+      return "bg-slate-100 text-slate-600 border-slate-200";
+    default:
+      return "bg-slate-100 text-slate-700 border-slate-200";
+  }
+}
+
+function getPriorityBadgeClasses(priority: ComplaintPriority): string {
+  switch (priority) {
+    case "URGENT":
+      return "bg-red-50 text-red-700 border-red-200 font-semibold";
+    case "HIGH":
+      return "bg-orange-50 text-orange-700 border-orange-200";
+    case "MEDIUM":
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+    case "LOW":
+      return "bg-slate-100 text-slate-600 border-slate-200";
+    default:
+      return "bg-slate-100 text-slate-600 border-slate-200";
+  }
+}
+
+function getSlaBadgeClasses(slaStatus: NonNullable<SLAStatus>): string {
+  switch (slaStatus) {
+    case "BREACHED":
+    case "COMPLETED_LATE":
+      return "bg-red-50 text-red-700 border-red-200";
+    case "ON_TIME":
+    case "COMPLETED_ON_TIME":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    default:
+      return "bg-slate-100 text-slate-600 border-slate-200";
+  }
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1" aria-label={`Rating: ${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className={`text-lg leading-none ${
+            star <= rating ? "text-amber-400" : "text-slate-300"
+          }`}
+        >
+          ★
+        </span>
+      ))}
+      <span className="ml-1.5 text-xs font-semibold text-slate-700">{rating} / 5</span>
+    </div>
+  );
+}
+
+function StaffComplaintDetailContent() {
+  const { complaintId } = useParams<{ complaintId: string }>();
+  const [complaint, setComplaint] = useState<Complaint | null>(null);
+  const [history, setHistory] = useState<ComplaintHistory[]>([]);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      if (!complaintId) return;
+
+      const [complaintResult, historyResult, feedbackResult] = await Promise.all([
+        apiRequest<Complaint>(`complaints/${encodeURIComponent(complaintId)}`),
+        apiRequest<ComplaintHistory[]>(`complaints/${encodeURIComponent(complaintId)}/history`),
+        apiRequest<Feedback>(`complaints/${encodeURIComponent(complaintId)}/feedback`),
+      ]);
+
+      if (!isMounted) return;
+
+      if (complaintResult.success && complaintResult.data) {
+        setComplaint(complaintResult.data);
+        setIsNotFound(false);
+        setError(null);
+      } else if (
+        !complaintResult.success &&
+        (complaintResult.status === 404 || complaintResult.status === 403)
+      ) {
+        setIsNotFound(true);
+      } else {
+        setError(complaintResult.message || "Failed to load complaint details.");
+      }
+
+      if (historyResult.success && Array.isArray(historyResult.data)) {
+        // Backend returns newest first; sort oldest-to-newest for chronological progression
+        const chronologicalHistory = [...historyResult.data].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        setHistory(chronologicalHistory);
+      }
+
+      if (feedbackResult.success && feedbackResult.data) {
+        setFeedback(feedbackResult.data);
+      } else {
+        setFeedback(null);
+      }
+
+      setIsLoading(false);
+    }
+
+    void loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [complaintId, refreshKey]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl py-6">
+        <p className="text-slate-600">Loading complaint details…</p>
+      </div>
+    );
+  }
+
+  if (isNotFound) {
+    return (
+      <div className="mx-auto max-w-4xl py-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-semibold text-slate-950">Complaint not found</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            The requested complaint does not exist or is not assigned to your staff account.
+          </p>
+          <Link
+            className="mt-6 inline-block rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+            href="/staff/complaints"
+          >
+            &larr; Back to assigned complaints
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !complaint) {
+    return (
+      <div className="mx-auto max-w-4xl py-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+          <p className="font-medium">Error loading complaint</p>
+          <p className="mt-1">{error || "Unable to retrieve complaint data."}</p>
+          <div className="mt-4 flex gap-3">
+            <button
+              className="font-semibold text-red-800 underline hover:text-red-950"
+              onClick={() => setRefreshKey((k) => k + 1)}
+              type="button"
+            >
+              Retry
+            </button>
+            <Link
+              className="font-semibold text-red-800 underline hover:text-red-950"
+              href="/staff/complaints"
+            >
+              Return to assigned complaints
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      {/* Top back navigation */}
+      <div>
+        <Link
+          className="inline-flex items-center text-sm font-medium text-slate-600 transition hover:text-slate-950"
+          href="/staff/complaints"
+        >
+          &larr; Back to assigned complaints
+        </Link>
+      </div>
+
+      {/* Complaint Overview Header */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(
+                  complaint.status
+                )}`}
+              >
+                {formatStatus(complaint.status)}
+              </span>
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getPriorityBadgeClasses(
+                  complaint.priority
+                )}`}
+              >
+                {formatStatus(complaint.priority)} priority
+              </span>
+              {complaint.slaStatus ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getSlaBadgeClasses(
+                    complaint.slaStatus
+                  )}`}
+                >
+                  SLA: {formatStatus(complaint.slaStatus)}
+                </span>
+              ) : null}
+            </div>
+
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              {complaint.title}
+            </h1>
+            <p className="mt-1 font-mono text-xs text-slate-400">Reference ID: {complaint.id}</p>
+          </div>
+        </div>
+
+        {/* Citizen Information Banner */}
+        {complaint.citizen ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs text-slate-700">
+            <span className="font-semibold text-slate-900">Submitted by:</span>
+            <span>{complaint.citizen.name}</span>
+            <span className="text-slate-400">({complaint.citizen.email})</span>
+          </div>
+        ) : null}
+
+        <div className="mt-6 border-t border-slate-100 pt-6">
+          <h2 className="text-sm font-semibold text-slate-900">Description</h2>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+            {complaint.description}
+          </p>
+        </div>
+
+        {/* Metadata Details Grid */}
+        <dl className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <dt className="text-xs font-medium text-slate-500">Department</dt>
+            <dd className="mt-1 text-sm font-semibold text-slate-900">
+              {complaint.department?.name || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-slate-500">Category</dt>
+            <dd className="mt-1 text-sm font-semibold text-slate-900">
+              {complaint.category?.name || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-slate-500">Location</dt>
+            <dd className="mt-1 text-sm text-slate-800">{complaint.location}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-slate-500">Assigned Staff</dt>
+            <dd className="mt-1 text-sm text-slate-800">
+              {complaint.assignedStaff ? (
+                <span>
+                  {complaint.assignedStaff.name}{" "}
+                  <span className="text-xs text-slate-500">({complaint.assignedStaff.email})</span>
+                </span>
+              ) : (
+                <span className="text-slate-400">Unassigned</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-slate-500">Submitted Date</dt>
+            <dd className="mt-1 text-sm text-slate-800">{formatDateTime(complaint.createdAt)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-slate-500">SLA Due Date</dt>
+            <dd className="mt-1 text-sm text-slate-800">
+              {complaint.dueAt ? formatDateTime(complaint.dueAt) : "—"}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* Status History Timeline */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h2 className="text-lg font-bold text-slate-950">Status Timeline</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Chronological progress of actions and status changes on this complaint.
+        </p>
+
+        {history.length === 0 ? (
+          <p className="mt-6 text-sm text-slate-500">No status transitions recorded yet.</p>
+        ) : (
+          <div className="relative mt-8 pl-6 sm:pl-8">
+            {/* Timeline vertical bar */}
+            <div className="absolute bottom-3 left-2.5 top-3 w-0.5 bg-slate-200 sm:left-3.5" />
+
+            <ol className="space-y-8">
+              {history.map((entry, index) => {
+                const isLast = index === history.length - 1;
+                return (
+                  <li className="relative" key={entry.id}>
+                    {/* Bullet marker */}
+                    <div
+                      className={`absolute -left-6 top-1.5 flex h-3 w-3 items-center justify-center rounded-full border-2 sm:-left-8 ${
+                        isLast
+                          ? "border-slate-900 bg-slate-900"
+                          : "border-slate-400 bg-white"
+                      }`}
+                    />
+
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {entry.fromStatus ? (
+                          <span className="text-xs text-slate-500">
+                            <span className="font-medium text-slate-700">
+                              {formatStatus(entry.fromStatus)}
+                            </span>{" "}
+                            &rarr;
+                          </span>
+                        ) : null}
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusBadgeClasses(
+                            entry.toStatus
+                          )}`}
+                        >
+                          {formatStatus(entry.toStatus)}
+                        </span>
+                      </div>
+
+                      <time className="text-xs text-slate-400">
+                        {formatDateTime(entry.createdAt)}
+                      </time>
+                    </div>
+
+                    {/* Actor information */}
+                    {entry.changedBy ? (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Updated by{" "}
+                        <span className="font-medium text-slate-700">
+                          {entry.changedBy.name}
+                        </span>{" "}
+                        <span className="text-slate-400">
+                          ({formatStatus(entry.changedBy.role)})
+                        </span>
+                      </p>
+                    ) : null}
+
+                    {/* Note / Resolution note */}
+                    {entry.note ? (
+                      <div className="mt-2 rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-700 border border-slate-100">
+                        <span className="font-semibold text-slate-900">Note: </span>
+                        {entry.note}
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
+      </section>
+
+      {/* Citizen Feedback (Read-Only) */}
+      {feedback ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">Citizen Feedback</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Submitted on {formatDateTime(feedback.createdAt)}
+                {feedback.updatedAt && feedback.updatedAt !== feedback.createdAt
+                  ? ` (Updated ${formatDateTime(feedback.updatedAt)})`
+                  : ""}
+              </p>
+            </div>
+            <StarRating rating={feedback.rating} />
+          </div>
+
+          {feedback.comment ? (
+            <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700 border border-slate-100">
+              <p className="italic">&ldquo;{feedback.comment}&rdquo;</p>
+            </div>
+          ) : (
+            <p className="mt-4 text-xs italic text-slate-500">No written comment provided.</p>
+          )}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+export default function StaffComplaintDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-4xl py-6">
+          <p className="text-slate-600">Loading complaint…</p>
+        </div>
+      }
+    >
+      <StaffComplaintDetailContent />
+    </Suspense>
+  );
+}
+
