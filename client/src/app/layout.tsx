@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { AuthProvider } from "@/features/auth/auth-provider";
+import { SmoothScrollProvider } from "@/components/providers/smooth-scroll-provider";
 import "./globals.css";
 
 const geist = Geist({
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={geist.variable}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <SmoothScrollProvider>{children}</SmoothScrollProvider>
+        </AuthProvider>
       </body>
     </html>
   );
