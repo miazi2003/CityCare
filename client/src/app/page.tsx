@@ -22,21 +22,19 @@ export default function HomePage() {
   useEffect(() => {
     let isMounted = true;
 
-    // Fetch Departments Preview
     const loadDepartments = async () => {
       setIsDeptsLoading(true);
       setDeptsError(null);
       const result = await apiRequest<Department[]>("departments");
       if (!isMounted) return;
       if (result.success && result.data !== null) {
-        setDepartments(result.data.slice(0, 4));
+        setDepartments(result.data.filter((d) => d.isActive).slice(0, 4));
       } else {
         setDeptsError(result.message || "Failed to load departments.");
       }
       setIsDeptsLoading(false);
     };
 
-    // Fetch Municipal Services Preview
     const loadServices = async () => {
       setIsServicesLoading(true);
       setServicesError(null);
@@ -59,17 +57,16 @@ export default function HomePage() {
     };
   }, [refreshKey]);
 
-  // Determine Hero Action Links based on Authentication & Role
   const getHeroPrimaryAction = () => {
     if (!isAuthenticated || !user) {
       return {
-        label: "Report a Complaint",
+        label: "Report an Issue",
         href: "/login",
       };
     }
     if (user.role === "CITIZEN") {
       return {
-        label: "Report a Complaint",
+        label: "Report an Issue",
         href: "/citizen/complaints/new",
       };
     }
@@ -99,7 +96,7 @@ export default function HomePage() {
       };
     }
     return {
-      label: "Explore Public Services",
+      label: "Explore Services",
       href: "/services",
     };
   };
@@ -110,230 +107,324 @@ export default function HomePage() {
   return (
     <PublicLayout>
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden border-b border-slate-200 bg-linear-to-b from-white to-slate-50 py-16 sm:py-24">
+      <section className="relative overflow-hidden bg-linear-to-b from-slate-50 via-white to-white py-16 sm:py-24 lg:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs mb-6">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Official City Care Municipal Platform
-            </div>
-
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Empowering Citizens, Improving Our Municipality
-            </h1>
-
-            <p className="mt-6 text-lg leading-relaxed text-slate-600 sm:text-xl">
-              Report neighborhood issues, request fee-based municipal services, and track resolution timelines with complete departmental accountability.
-            </p>
-
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                className="w-full rounded-xl bg-slate-950 px-6 py-3.5 text-base font-semibold text-white shadow-md transition hover:bg-slate-800 sm:w-auto text-center"
-                href={primaryAction.href}
-              >
-                {primaryAction.label} →
-              </Link>
-              <Link
-                className="w-full rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-base font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50 sm:w-auto text-center"
-                href={secondaryAction.href}
-              >
-                {secondaryAction.label}
-              </Link>
-            </div>
-
-            {/* Value Pillars */}
-            <div className="mt-12 grid grid-cols-2 gap-4 border-t border-slate-200/80 pt-8 sm:grid-cols-3 text-left">
-              <div className="p-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Targeted SLAs
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Category-Driven Deadlines
-                </p>
+          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+            {/* Left Column: Headline & CTAs */}
+            <div className="lg:col-span-7">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-semibold text-slate-800 shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                SMARTER CITY SERVICES
               </div>
-              <div className="p-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Direct Assignment
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Dedicated Department Staff
-                </p>
+
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-6xl lg:text-6xl/tight">
+                City services, <br />
+                <span className="text-slate-700">made simpler.</span>
+              </h1>
+
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600 sm:text-xl">
+                Report local issues, request municipal services, and stay updated from one simple platform.
+              </p>
+
+              <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
+                <Link
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-6 py-3.5 text-base font-semibold text-white shadow-xs transition hover:bg-slate-800"
+                  href={primaryAction.href}
+                >
+                  {primaryAction.label} &rarr;
+                </Link>
+                <Link
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-base font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300"
+                  href={secondaryAction.href}
+                >
+                  {secondaryAction.label}
+                </Link>
               </div>
-              <div className="col-span-2 sm:col-span-1 p-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Total Transparency
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Full Status &amp; Audit Trail
-                </p>
+
+              <div className="mt-8 flex items-center gap-2 text-xs font-medium text-slate-500">
+                <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Connected directly with city departments and operational response teams.
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* 2. HOW CITY CARE WORKS */}
-      <section className="border-b border-slate-200 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Operational Workflow
-            </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              How City Care Works
-            </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600">
-              A transparent, structured lifecycle ensuring every reported issue is reviewed, assigned, resolved, and evaluated.
-            </p>
-          </div>
-
-          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-5">
-            {[
-              {
-                step: "01",
-                title: "Submit Issue",
-                desc: "Citizens submit detailed reports specifying category, priority, description, and location.",
-              },
-              {
-                step: "02",
-                title: "Department Routing",
-                desc: "Complaints are automatically routed and reviewed by municipal administrators for assignment.",
-              },
-              {
-                step: "03",
-                title: "Staff Action",
-                desc: "Designated departmental staff specialists investigate, inspect, and work on resolution.",
-              },
-              {
-                step: "04",
-                title: "SLA Accountability",
-                desc: "Real-time deadline tracking ensures work is completed within defined category SLA hours.",
-              },
-              {
-                step: "05",
-                title: "Review & Feedback",
-                desc: "Citizens review the official resolution notes and provide star ratings and service feedback.",
-              },
-            ].map((item, idx) => (
-              <div
-                className="relative flex flex-col rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-2xs"
-                key={item.step}
-              >
-                <span className="text-3xl font-black text-slate-300">
-                  {item.step}
-                </span>
-                <h3 className="mt-3 text-base font-bold text-slate-950">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                  {item.desc}
-                </p>
-                {idx < 4 ? (
-                  <div className="hidden md:block absolute -right-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold z-10">
-                    →
+            {/* Right Column: Civic Platform Composition Graphic */}
+            <div className="relative lg:col-span-5">
+              <div className="relative mx-auto max-w-md rounded-2xl border border-slate-200/80 bg-linear-to-b from-white to-slate-50/80 p-6 shadow-xl shadow-slate-200/50">
+                {/* Simulated Header */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-slate-200" />
+                    <div className="h-3 w-3 rounded-full bg-slate-200" />
+                    <div className="h-3 w-3 rounded-full bg-slate-200" />
                   </div>
-                ) : null}
+                  <span className="font-mono text-[11px] font-semibold text-slate-400">
+                    MUNICIPAL CONSOLE
+                  </span>
+                </div>
+
+                {/* Simulated Active Status Stream */}
+                <div className="mt-5 space-y-3.5">
+                  <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-900">
+                        Road Repair &amp; Pothole Fix
+                      </span>
+                      <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                        In Progress
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Assigned to Public Works • SLA Target 24h
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-900">
+                        Bulky Waste Collection
+                      </span>
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        Paid &amp; Scheduled
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Sanitation Department • 142 Elm Street
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-900">
+                        Street Light Outage
+                      </span>
+                      <span className="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-700">
+                        Resolved
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Electrical Services • 5★ Citizen Rating
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-slate-100 pt-3 text-center">
+                  <span className="text-xs font-medium text-slate-400">
+                    Transparent, auditable lifecycle for all municipal actions
+                  </span>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. DEPARTMENTS PREVIEW */}
-      <section className="border-b border-slate-200 bg-slate-50 py-16 sm:py-20">
+      {/* 2. VALUE STRIP */}
+      <section className="border-y border-slate-100 bg-white py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Municipal Governance
-              </h2>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                Active Departments
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Dedicated municipal departments actively managing civic issues across our community.
-              </p>
-            </div>
-            <Link
-              className="inline-flex items-center text-sm font-semibold text-slate-950 hover:underline"
-              href="/departments"
-            >
-              View all departments →
-            </Link>
-          </div>
-
-          <div className="mt-8">
-            {isDeptsLoading ? (
-              <LoadingState message="Loading active departments…" />
-            ) : deptsError ? (
-              <ErrorAlert
-                message={deptsError}
-                onRetry={() => setRefreshKey((k) => k + 1)}
-                retryLabel="Retry loading departments"
-              />
-            ) : departments.length === 0 ? (
-              <EmptyState
-                description="No active departments are currently listed."
-                title="No departments available"
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {departments.map((dept) => (
-                  <article
-                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-xs transition hover:shadow-md"
-                    key={dept.id}
-                  >
-                    <div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-900 font-bold text-sm mb-4">
-                        {dept.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <h3 className="text-base font-bold text-slate-950">
-                        {dept.name}
-                      </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-3">
-                        {dept.description || "Active municipal department servicing public community needs."}
-                      </p>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-slate-100">
-                      <Link
-                        className="text-xs font-semibold text-slate-900 hover:underline"
-                        href="/categories"
-                      >
-                        Explore categories →
-                      </Link>
-                    </div>
-                  </article>
-                ))}
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 font-bold">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
               </div>
-            )}
+              <div>
+                <h3 className="text-sm font-bold text-slate-950">Report Issues</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Fast reporting with category and location.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 font-bold">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-950">Request Services</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Order municipal services on demand.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 font-bold">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-950">Track Progress</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Complete status transparency and notes.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 font-bold">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-950">Stay Updated</h3>
+                <p className="mt-0.5 text-xs text-slate-500">Milestone and status notifications.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 4. MUNICIPAL SERVICES PREVIEW */}
-      <section className="border-b border-slate-200 bg-white py-16 sm:py-20">
+      {/* 3. HOW CITY CARE WORKS (3-Step Section) */}
+      <section className="py-20 sm:py-24 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              SIMPLE WORKFLOW
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+              How City Care Works
+            </h2>
+            <p className="mt-3 text-base text-slate-600">
+              A transparent three-step process connecting your request directly to the responsible municipal specialists.
+            </p>
+          </div>
+
+          <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="space-y-4">
+              <span className="text-4xl font-extrabold text-slate-300">01</span>
+              <h3 className="text-xl font-bold text-slate-950">Report or Request</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Submit a neighborhood issue or select a municipal service with full location and description details.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <span className="text-4xl font-extrabold text-slate-300">02</span>
+              <h3 className="text-xl font-bold text-slate-950">City Team Responds</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                The appropriate department and staff investigate, assign, and take direct action within defined SLA targets.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <span className="text-4xl font-extrabold text-slate-300">03</span>
+              <h3 className="text-xl font-bold text-slate-950">Track the Progress</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Follow status updates, receive notifications, view official resolution notes, and rate the completed outcome.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. EDITORIAL STORY SECTION: One place to connect */}
+      <section className="border-t border-slate-100 bg-slate-50/60 py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+            <div className="lg:col-span-6 space-y-6">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                CONNECTED GOVERNANCE
+              </span>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+                One place to connect with your city.
+              </h2>
+              <p className="text-base leading-relaxed text-slate-600">
+                No more guessing which city office to contact. City Care routes your issues directly to specialized departments—ensuring accountability and verified resolution.
+              </p>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                    ✓
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">
+                    Direct complaint reporting with priority tagging and location
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                    ✓
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">
+                    Municipal service requests with clear pricing and quantity
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                    ✓
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">
+                    SLA-driven resolution targets managed by assigned department staff
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                    ✓
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">
+                    Citizen star ratings and feedback upon issue resolution
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h4 className="font-bold text-slate-950">Department Assignment</h4>
+                    <p className="text-xs text-slate-500">Public Works &bull; Sanitation &bull; Utilities</p>
+                  </div>
+                  <span className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                    Active
+                  </span>
+                </div>
+
+                <div className="space-y-3 text-sm text-slate-600">
+                  <div className="rounded-lg bg-slate-50 p-3.5">
+                    <p className="font-semibold text-slate-900">Road &amp; Pavement Maintenance</p>
+                    <p className="text-xs text-slate-500 mt-0.5">SLA Target: 48 Hours &bull; Priority: Medium</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3.5">
+                    <p className="font-semibold text-slate-900">Waste &amp; Hazardous Sanitation</p>
+                    <p className="text-xs text-slate-500 mt-0.5">SLA Target: 24 Hours &bull; Priority: Urgent</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-3.5">
+                    <p className="font-semibold text-slate-900">Public Parks &amp; Tree Trimming</p>
+                    <p className="text-xs text-slate-500 mt-0.5">SLA Target: 72 Hours &bull; Priority: Low</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. MUNICIPAL SERVICES PREVIEW */}
+      <section className="py-20 sm:py-24 bg-white border-t border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Public Services
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                OFFICIAL CATALOG
+              </span>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+                Municipal Services Preview
               </h2>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                Municipal Services Catalog
-              </p>
               <p className="mt-2 text-sm text-slate-600">
-                Request standard or fee-based public services directly from city operations.
+                Request standard municipal services directly with clear pricing and quantity.
               </p>
             </div>
             <Link
-              className="inline-flex items-center text-sm font-semibold text-slate-950 hover:underline"
+              className="text-sm font-semibold text-slate-950 hover:underline"
               href="/services"
             >
-              Browse full catalog →
+              View All Services &rarr;
             </Link>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-10">
             {isServicesLoading ? (
               <LoadingState message="Loading municipal services…" />
             ) : servicesError ? (
@@ -351,19 +442,19 @@ export default function HomePage() {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {services.map((service) => (
                   <article
-                    className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-xs transition hover:shadow-md"
+                    className="flex flex-col justify-between rounded-xl border border-slate-100 bg-white p-6 shadow-xs transition hover:shadow-md hover:border-slate-200"
                     key={service.id}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
                           Active Service
                         </span>
                       </div>
                       <h3 className="mt-3 text-base font-bold text-slate-950">
                         {service.name}
                       </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-3">
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
                         {service.description || "Public municipal service provision for registered citizens."}
                       </p>
                     </div>
@@ -376,10 +467,10 @@ export default function HomePage() {
                         <span className="text-[11px] text-slate-500"> / unit</span>
                       </div>
                       <Link
-                        className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800"
+                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
                         href={`/services/${service.id}`}
                       >
-                        View Details
+                        View Service
                       </Link>
                     </div>
                   </article>
@@ -390,101 +481,172 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. PLATFORM FEATURES */}
-      <section className="border-b border-slate-200 bg-slate-50 py-16 sm:py-20">
+      {/* 6. DEPARTMENTS SECTION */}
+      <section className="py-20 sm:py-24 bg-slate-50/60 border-t border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Civic Infrastructure
-            </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Comprehensive Platform Features
-            </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600">
-              Built with purpose-designed features connecting residents and city administration for faster, accountable outcomes.
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                GOVERNANCE
+              </span>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+                Municipal Departments
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Operational city departments responding to issues and fulfilling municipal requests.
+              </p>
+            </div>
+            <Link
+              className="text-sm font-semibold text-slate-950 hover:underline"
+              href="/departments"
+            >
+              View All Departments &rarr;
+            </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: "End-to-End Complaint Tracking",
-                desc: "Live visibility into status progression, timeline events, assigned department specialists, and resolution notes.",
-              },
-              {
-                title: "Departmental Category Routing",
-                desc: "Standardized categories ensure complaints route immediately to specialized departmental teams.",
-              },
-              {
-                title: "SLA Response Monitoring",
-                desc: "Strict turnaround targets ensure urgent and standard civic problems are addressed within defined operational hours.",
-              },
-              {
-                title: "Municipal Service Fulfillment",
-                desc: "Order fee-based public services like bulk collection or permits with tracked request fulfillment.",
-              },
-              {
-                title: "Real-Time System Alerts",
-                desc: "Automated notifications keep citizens and staff informed on status transitions, assignments, and milestones.",
-              },
-              {
-                title: "Citizen Feedback & Accountability",
-                desc: "Citizens rate resolved complaints, providing authentic feedback that drives municipal service quality.",
-              },
-            ].map((feature) => (
-              <div
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs"
-                key={feature.title}
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-white font-bold text-sm mb-4">
-                  ✓
-                </div>
-                <h3 className="text-base font-bold text-slate-950">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {feature.desc}
-                </p>
+          <div className="mt-10">
+            {isDeptsLoading ? (
+              <LoadingState message="Loading active departments…" />
+            ) : deptsError ? (
+              <ErrorAlert
+                message={deptsError}
+                onRetry={() => setRefreshKey((k) => k + 1)}
+                retryLabel="Retry loading departments"
+              />
+            ) : departments.length === 0 ? (
+              <EmptyState
+                description="No active departments are currently listed."
+                title="No departments available"
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {departments.map((dept) => (
+                  <article
+                    className="flex flex-col justify-between rounded-xl border border-slate-100 bg-white p-6 shadow-xs transition hover:shadow-md hover:border-slate-200"
+                    key={dept.id}
+                  >
+                    <div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-900 font-bold text-sm mb-4">
+                        {dept.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <h3 className="text-base font-bold text-slate-950">
+                        {dept.name}
+                      </h3>
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
+                        {dept.description || "Active municipal department servicing public community needs."}
+                      </p>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-slate-100">
+                      <Link
+                        className="text-xs font-semibold text-slate-900 hover:underline"
+                        href="/categories"
+                      >
+                        Explore categories &rarr;
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
 
-      {/* 6. COMPLAINT STATUS LIFECYCLE */}
-      <section className="border-b border-slate-200 bg-white py-16 sm:py-20">
+      {/* 7. FEATURE SECTION (Reversed): Transparency & Tracking */}
+      <section className="py-20 sm:py-24 bg-white border-t border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Status Pipeline
-            </h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+            <div className="order-2 lg:order-1 lg:col-span-6">
+              <div className="rounded-2xl border border-slate-200 bg-linear-to-b from-slate-50 to-white p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <span className="text-xs font-bold text-slate-900">Live Complaint Audit Trail</span>
+                  <span className="text-[11px] text-slate-400 font-mono">ID: #C-10492</span>
+                </div>
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-slate-100 shadow-2xs">
+                    <span className="font-semibold text-slate-800">1. Submitted by Citizen</span>
+                    <span className="text-slate-400">Timestamp logged</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-slate-100 shadow-2xs">
+                    <span className="font-semibold text-slate-800">2. Reviewed &amp; Assigned</span>
+                    <span className="text-slate-400">Staff assigned</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-slate-100 shadow-2xs">
+                    <span className="font-semibold text-slate-800">3. In Progress Work</span>
+                    <span className="text-slate-400">SLA target monitored</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-slate-100 shadow-2xs">
+                    <span className="font-semibold text-slate-800">4. Resolved &amp; Feedback</span>
+                    <span className="text-slate-400">Citizen verified</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="order-1 lg:order-2 lg:col-span-6 space-y-6">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                AUDITABLE TRANSPARENCY
+              </span>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+                Know what’s happening with every request.
+              </h2>
+              <p className="text-base leading-relaxed text-slate-600">
+                Every civic complaint and service request records an auditable timeline with explicit status transitions, resolution notes, and feedback ratings.
+              </p>
+
+              <div className="space-y-3 pt-2 text-sm text-slate-700">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-slate-900 shrink-0" />
+                  <span><strong>Explicit status machine:</strong> Follow each step from submission to review, assignment, and closure.</span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-slate-900 shrink-0" />
+                  <span><strong>Official resolution notes:</strong> Understand exactly what action was taken by municipal staff.</span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-slate-900 shrink-0" />
+                  <span><strong>Targeted notifications:</strong> Receive direct updates when milestones are achieved.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. COMPLAINT STATUS LIFECYCLE (Timeline) */}
+      <section className="py-20 sm:py-24 bg-slate-50/60 border-t border-slate-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              AUDITED LIFECYCLE
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
               Complaint Status Lifecycle
-            </p>
-            <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600">
-              Every complaint follows an audited state machine from submission to resolution.
+            </h2>
+            <p className="mt-3 text-sm text-slate-600">
+              Every complaint moves through standardized operational stages.
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {[
-              { name: "SUBMITTED", label: "Submitted", color: "bg-slate-100 text-slate-800 border-slate-200", desc: "Citizen submits initial issue" },
-              { name: "UNDER_REVIEW", label: "Under Review", color: "bg-amber-50 text-amber-800 border-amber-200", desc: "Admin assesses validity" },
-              { name: "ASSIGNED", label: "Assigned", color: "bg-blue-50 text-blue-800 border-blue-200", desc: "Allocated to department staff" },
-              { name: "IN_PROGRESS", label: "In Progress", color: "bg-indigo-50 text-indigo-800 border-indigo-200", desc: "Active investigation & work" },
-              { name: "RESOLVED", label: "Resolved", color: "bg-emerald-50 text-emerald-800 border-emerald-200", desc: "Resolution note recorded" },
-              { name: "CLOSED", label: "Closed", color: "bg-teal-50 text-teal-800 border-teal-200", desc: "Completed & citizen rated" },
-            ].map((status) => (
+              { label: "Submitted", badge: "bg-slate-100 text-slate-800", desc: "Citizen submits initial issue" },
+              { label: "Under Review", badge: "bg-amber-50 text-amber-800", desc: "Admin assesses validity" },
+              { label: "Assigned", badge: "bg-blue-50 text-blue-800", desc: "Assigned to department staff" },
+              { label: "In Progress", badge: "bg-indigo-50 text-indigo-800", desc: "Active investigation & work" },
+              { label: "Resolved", badge: "bg-emerald-50 text-emerald-800", desc: "Resolution note recorded" },
+              { label: "Closed", badge: "bg-teal-50 text-teal-800", desc: "Completed & citizen rated" },
+            ].map((st) => (
               <div
-                className="flex flex-col rounded-xl border p-4 shadow-2xs text-center justify-between"
-                key={status.name}
+                className="flex flex-col justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-2xs text-center"
+                key={st.label}
               >
                 <div>
-                  <span className={`inline-block rounded-full border px-2.5 py-1 text-xs font-semibold ${status.color}`}>
-                    {status.label}
+                  <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${st.badge}`}>
+                    {st.label}
                   </span>
-                  <p className="mt-3 text-xs text-slate-600 leading-snug">
-                    {status.desc}
+                  <p className="mt-2.5 text-xs text-slate-600 leading-snug">
+                    {st.desc}
                   </p>
                 </div>
               </div>
@@ -493,27 +655,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7. FINAL CALL TO ACTION */}
-      <section className="bg-slate-950 py-16 text-white sm:py-20">
-        <div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+      {/* 9. FINAL CALL TO ACTION */}
+      <section className="bg-slate-950 py-20 text-white sm:py-24">
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Ready to improve your neighborhood?
+            Need help from your city?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-400">
-            Sign in or create a citizen account to submit issues, track live department updates, and request municipal services today.
+          <p className="mx-auto mt-4 max-w-xl text-base text-slate-400">
+            Report an issue or explore available municipal services in just a few steps.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3.5 sm:flex-row">
             <Link
               className="w-full rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-slate-950 shadow-md transition hover:bg-slate-100 sm:w-auto text-center"
               href={primaryAction.href}
             >
-              {primaryAction.label} →
+              {primaryAction.label} &rarr;
             </Link>
             <Link
               className="w-full rounded-xl border border-slate-700 bg-slate-900 px-6 py-3.5 text-base font-semibold text-white shadow-2xs transition hover:bg-slate-800 sm:w-auto text-center"
-              href="/departments"
+              href="/services"
             >
-              View Municipal Departments
+              Browse Services
             </Link>
           </div>
         </div>

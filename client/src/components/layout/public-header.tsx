@@ -33,14 +33,14 @@ function PublicHeaderContent() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xs">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md transition-colors">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link
-          className="flex items-center gap-2.5 text-slate-950 transition hover:opacity-90"
+          className="flex items-center gap-2.5 text-slate-950 transition-opacity hover:opacity-90"
           href="/"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-base font-bold text-white shadow-xs">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white shadow-xs ring-1 ring-slate-900/10">
             CC
           </span>
           <div className="flex flex-col">
@@ -48,7 +48,7 @@ function PublicHeaderContent() {
               City Care
             </span>
             <span className="text-[11px] font-medium text-slate-500 leading-tight">
-              Municipal Services &amp; Complaints
+              Municipal Services &amp; Civic Portal
             </span>
           </div>
         </Link>
@@ -59,7 +59,7 @@ function PublicHeaderContent() {
             const active = isLinkActive(link.href);
             return (
               <Link
-                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
                   active
                     ? "bg-slate-100 text-slate-950 font-semibold"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
